@@ -674,6 +674,7 @@ app = dash.Dash(
     ],
     suppress_callback_exceptions=True,
 )
+server = app.server
 app.title = 'UAO Fútbol Sala'
 
 # ── CSS de animaciones ──
@@ -1282,5 +1283,4 @@ def jump_section(c_cmj, c_sj, c_dj, player_sel, main_tab, cur_tab):
 # RUN
 # ══════════════════════════════════════════
 if __name__ == '__main__':
-    print('\n🚀  Dashboard en  http://localhost:8050\n')
-    app.run(debug=True, port=8050)
+    app.run(debug=False, port=8050)
