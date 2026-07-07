@@ -809,9 +809,9 @@ app.index_string = '''
             ::-webkit-scrollbar-track { background: #0d0f14; }
             ::-webkit-scrollbar-thumb { background: #3D4560; border-radius: 3px; }
             .js-plotly-plot .plotly .modebar { display: none !important; }
-            .jump-dropdown .Select-control { background: #1c2030 !important; border-color: #3D4560 !important; }
-            .jump-dropdown .Select-menu-outer { background: #1c2030 !important; border-color: #3D4560 !important; }
-            .jump-dropdown .Select-option { color: #F0F2F8 !important; background: #1c2030 !important; }
+            .jump-dropdown .Select-control { background: #F4F5F8 !important; border-color: #3D4560 !important; }
+            .jump-dropdown .Select-menu-outer { background: #F4F5F8 !important; border-color: #3D4560 !important; }
+            .jump-dropdown .Select-option { color: #F0F2F8 !important; background: #F4F5F8 !important; }
             .jump-dropdown .Select-option:hover, .jump-dropdown .VirtualizedSelectFocusedOption { background: #232840 !important; }
             .jump-dropdown .Select-value-label, .jump-dropdown .Select-placeholder { color: #8892A4 !important; }
             .Select-multi-value-wrapper .Select-value { background: #232840 !important; border-color: #3D4560 !important; color: #F0F2F8 !important; }
