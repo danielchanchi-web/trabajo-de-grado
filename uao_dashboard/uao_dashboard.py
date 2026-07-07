@@ -6,6 +6,7 @@ UAO Fútbol Sala — Dashboard de Rendimiento Deportivo
   3. Abre:     http://localhost:8050
 """
 
+import os
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -17,8 +18,8 @@ import json
 # ══════════════════════════════════════════
 # ⚠️  CAMBIA ESTA LÍNEA CON TU RUTA ⚠️
 # ══════════════════════════════════════════
-FILE_PATH = r'C:\Users\danie\Downloads\DATOS_UAO_SOLO_PRUEBAS_X2.xlsx'
-
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # ══════════════════════════════════════════
 # CARGA DE DATOS
 # ══════════════════════════════════════════
@@ -180,8 +181,15 @@ def load_data(path):
     return df
 
 
+DEFAULT_FILE = os.path.join(UPLOAD_FOLDER, "datos.xlsx")
+
 try:
-    df = load_data(FILE_PATH)
+    if os.path.exists(DEFAULT_FILE):
+        df = load_data(DEFAULT_FILE)
+        print("Excel cargado.")
+    else:
+        raise FileNotFoundError
+
     print(f"✅  {len(df)} deportistas cargados")
 except Exception as e:
     print(f"⚠️  Excel no encontrado: {e}\n   Usando datos de ejemplo.")
@@ -1374,4 +1382,10 @@ def jump_section(c_cmj, c_sj, c_dj, player_sel, main_tab, cur_tab):
 # ══════════════════════════════════════════
 if __name__ == '__main__':
     print('\n🚀  Dashboard en  http://localhost:8050\n')
-    app.run(debug=True, port=8050)
+    if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8050))
+    app.run(
+        host="0.0.0.0",
+        port=port,
+        debug=False
+    )
