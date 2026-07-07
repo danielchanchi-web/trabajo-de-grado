@@ -1382,7 +1382,6 @@ def jump_section(c_cmj, c_sj, c_dj, player_sel, main_tab, cur_tab):
 # ══════════════════════════════════════════
 if __name__ == '__main__':
     print('\n🚀  Dashboard en  http://localhost:8050\n')
-    if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8050))
     app.run(
         host="0.0.0.0",
