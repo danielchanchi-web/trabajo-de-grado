@@ -6,6 +6,7 @@ UAO Fútbol Sala — Dashboard de Rendimiento Deportivo
   3. Abre:     http://localhost:8050
 """
 
+import base64
 import os
 import pandas as pd
 import numpy as np
@@ -862,33 +863,36 @@ def sidebar_link_style(active):
 
 app.layout = html.Div([
 
-    # ── HEADER ──
-    html.Div([
-        html.Div([
-            html.Div('⚽', style={'fontSize': '22px', 'marginRight': '12px'}),
-            html.Div([
-                html.Div('UAO Fútbol Sala',
-                         style={'fontFamily': 'Space Grotesk,sans-serif',
-                                'fontSize': '17px', 'fontWeight': '700', 'color': TEXT}),
-                html.Div('Análisis de rendimiento',
-                         style={'fontSize': '10px', 'color': MUTED,
-                                'textTransform': 'uppercase', 'letterSpacing': '.5px'}),
-            ]),
-        ], style={'display': 'flex', 'alignItems': 'center'}),
-
-        html.Div([
-            html.Button([html.Span('⭱', style={'marginRight': '8px'}), 'Importar datos'],
-                        id='btn-import',
-                        style={'padding': '9px 16px', 'borderRadius': '8px', 'fontSize': '13px',
-                               'fontWeight': '500', 'cursor': 'pointer',
-                               'border': f'1px solid {FAINT}',
-                               'background': 'transparent', 'color': TEXT,
-                               'fontFamily': 'Inter,sans-serif'}),
-        ], style={'display': 'flex', 'alignItems': 'center'}),
-
-    ], style={'background': SURF, 'borderBottom': f'1px solid {FAINT}',
-              'padding': '14px 28px', 'position': 'sticky', 'top': '0', 'zIndex': '100',
-              'display': 'flex', 'alignItems': 'center', 'justifyContent': 'space-between'}),
+    # En el HEADER (parte superior del layout)
+html.Div([
+    dcc.Upload(
+        id='upload-data',
+        children=html.Button([
+            html.Span('⭱', style={'marginRight': '8px'}),
+            'Importar datos'
+        ], style={
+            'padding': '9px 16px',
+            'borderRadius': '8px',
+            'fontSize': '13px',
+            'fontWeight': '500',
+            'cursor': 'pointer',
+            'border': f'1px solid {FAINT}',
+            'background': 'transparent',
+            'color': TEXT,
+            'fontFamily': 'Inter,sans-serif',
+        }),
+        multiple=False,  # Solo un archivo a la vez
+        style={
+            'display': 'inline-block',
+        },
+    ),
+    html.Div(id='upload-status', style={
+        'fontSize': '12px',
+        'color': MUTED,
+        'marginLeft': '12px',
+        'display': 'inline-block'
+    }),
+], style={'display': 'flex', 'alignItems': 'center'}),
 
     # ── BODY (sidebar + contenido) ──
     html.Div([
@@ -1375,7 +1379,80 @@ def jump_section(c_cmj, c_sj, c_dj, player_sel, main_tab, cur_tab):
         html.Div([radar_header, radar_content]),
         html.Div([bar_header, bar_content]),
     )
+  
+# ══════════════════════════════════════════
+# CALLBACK PARA IMPORTAR DATOS
+# ══════════════════════════════════════════
+@app.callback(
+    Output('upload-status', 'children'),
+    Output('upload-status', 'style'),
+    Input('upload-data', 'contents'),
+    State('upload-data', 'filename'),
+)
+def upload_data(contents, filename):
+    if contents is None:
+        return '', {'display': 'none'}
+    
+    try:
+        # Decodificar el archivo
+        content_type, content_string = contents.split(',')
+        decoded = base64.b64decode(content_string)
+        
+        # Guardar el archivo temporalmente
+        import io
+        import tempfile
+        
+        # Crear archivo temporal
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+            tmp_file.write(decoded)
+            tmp_path = tmp_file.name
+        
+        # Cargar los datos usando tu función existente
+        global df, ALL_IDS
+        df = load_data(tmp_path)
+        ALL_IDS = df['Nombre'].tolist()
+        
+        # Limpiar archivo temporal
+        os.unlink(tmp_path)
+        
+        # Actualizar las opciones del dropdown
+        options = [{'label': pid, 'value': pid} 
+                   for pid in sorted(ALL_IDS, key=lambda x: int(x.split('_')[1]))]
+        
+        # Actualizar el dropdown (necesitamos un Output extra)
+        # Por eso vamos a usar un Store o un callback adicional
+        
+        return f'✅ {len(df)} deportistas cargados desde {filename}', {
+            'fontSize': '12px',
+            'color': TEAL,
+            'marginLeft': '12px',
+            'display': 'inline-block'
+        }
+        
+    except Exception as e:
+        return f'❌ Error: {str(e)}', {
+            'fontSize': '12px',
+            'color': HOT,
+            'marginLeft': '12px',
+            'display': 'inline-block'
+        }
 
+@app.callback(
+    Output('rend-player-select', 'options'),
+    Output('jump-player-select', 'options'),
+    Input('upload-data', 'contents'),
+)
+def update_dropdowns(contents):
+    if contents is None:
+        # Opciones por defecto
+        options = [{'label': pid, 'value': pid} 
+                   for pid in sorted(ALL_IDS, key=lambda x: int(x.split('_')[1]))]
+        return options, options
+    
+    # Usar los datos ya actualizados en la variable global
+    options = [{'label': pid, 'value': pid} 
+               for pid in sorted(ALL_IDS, key=lambda x: int(x.split('_')[1]))]
+    return options, options
 
 # ══════════════════════════════════════════
 # RUN
