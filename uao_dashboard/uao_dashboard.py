@@ -809,12 +809,92 @@ app.index_string = '''
             ::-webkit-scrollbar-track { background: #0d0f14; }
             ::-webkit-scrollbar-thumb { background: #3D4560; border-radius: 3px; }
             .js-plotly-plot .plotly .modebar { display: none !important; }
-            .jump-dropdown .Select-control { background: #F4F5F8 !important; border-color: #3D4560 !important; }
-            .jump-dropdown .Select-menu-outer { background: #F4F5F8 !important; border-color: #3D4560 !important; }
-            .jump-dropdown .Select-option { color: #F0F2F8 !important; background: #F4F5F8 !important; }
-            .jump-dropdown .Select-option:hover, .jump-dropdown .VirtualizedSelectFocusedOption { background: #232840 !important; }
-            .jump-dropdown .Select-value-label, .jump-dropdown .Select-placeholder { color: #F4F5F8 !important; }
-            .Select-multi-value-wrapper .Select-value { background: #F4F5F8 !important; border-color: #3D4560 !important; color: #F0F2F8 !important; }
+            /* ========================================
+   ESTILOS DEL DROPDOWN (MODO CLARO)
+   ======================================== */
+
+/* Barra principal del dropdown */
+.jump-dropdown .Select-control { 
+    background: #FFFFFF !important; 
+    border-color: #CBD5E1 !important; 
+    border-radius: 8px !important;
+}
+
+/* Barra de búsqueda */
+.jump-dropdown .Select-input input {
+    color: #333333 !important;
+    background: #FFFFFF !important;
+}
+
+/* Placeholder */
+.jump-dropdown .Select-placeholder {
+    color: #94A3B8 !important;
+}
+
+/* Menú desplegable */
+.jump-dropdown .Select-menu-outer { 
+    background: #FFFFFF !important; 
+    border-color: #CBD5E1 !important; 
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+/* Opciones individuales */
+.jump-dropdown .Select-option { 
+    color: #333333 !important; 
+    background: #FFFFFF !important; 
+    padding: 8px 12px !important;
+}
+
+.jump-dropdown .Select-option:hover { 
+    background: #F1F5F9 !important; 
+}
+
+.jump-dropdown .Select-option.is-selected {
+    background: #E8F0FE !important;
+    color: #1D4ED8 !important;
+}
+
+/* Checkboxes */
+.jump-dropdown .Select-option input[type="checkbox"] {
+    accent-color: #1D4ED8 !important;
+    margin-right: 8px !important;
+}
+
+/* "Select All" y "Deselect All" */
+.jump-dropdown .Select-all {
+    color: #333333 !important;
+    background: #F8FAFC !important;
+    padding: 8px 12px !important;
+    border-bottom: 1px solid #E2E8F0 !important;
+}
+
+.jump-dropdown .Select-all:hover {
+    background: #E8F0FE !important;
+    color: #1D4ED8 !important;
+}
+
+/* Tags seleccionados (chips) */
+.Select-multi-value-wrapper .Select-value { 
+    background: #E8F0FE !important; 
+    border-color: #93C5FD !important; 
+    color: #1D4ED8 !important; 
+    border-radius: 4px !important;
+}
+
+.Select-multi-value-wrapper .Select-value-icon {
+    color: #1D4ED8 !important;
+}
+
+.Select-multi-value-wrapper .Select-value-icon:hover {
+    background: #DBEAFE !important;
+    color: #1E40AF !important;
+}
+
+/* Texto de los valores seleccionados */
+.jump-dropdown .Select-value-label { 
+    color: #1D4ED8 !important; 
+}
         </style>
     </head>
     <body>
