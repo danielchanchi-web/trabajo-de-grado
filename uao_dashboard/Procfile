@@ -1,1 +1,1 @@
-web: python uao_dashboard.py
+web: gunicorn uao_dashboard:app.server
