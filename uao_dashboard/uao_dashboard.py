@@ -17,7 +17,7 @@ import json
 # ══════════════════════════════════════════
 # ⚠️  CAMBIA ESTA LÍNEA CON TU RUTA ⚠️
 # ══════════════════════════════════════════
-FILE_PATH = r'C:\Users\danie\Downloads\DATOS_UAO_SOLO_PRUEBAS.xlsx'
+FILE_PATH = r'C:\Users\danie\Downloads\DATOS_UAO_SOLO_PRUEBAS_X2.xlsx'
 
 # ══════════════════════════════════════════
 # CARGA DE DATOS
@@ -30,16 +30,66 @@ def load_data(path):
     dg = dg.dropna()
     dg['Nombre'] = dg['Nombre'].astype(str).str.strip()
 
-    # ── Puntuaciones desde "puntuacion" ──
-    dp = pd.read_excel(path, sheet_name='puntuacion', header=0)
-    dp = dp.iloc[:, [1, 2, 3, 4]].copy()
-    dp.columns = ['Nombre', 'Velocidad', '5_10_5', 'StarDrill']
-    dp['Nombre'] = dp['Nombre'].astype(str).str.strip()
-    for c in ['Velocidad', '5_10_5', 'StarDrill']:
-        dp[c] = pd.to_numeric(dp[c], errors='coerce').fillna(0)
+    
+    # ── Función z-score ──
+    def zscore_col(s):
+        s     = pd.to_numeric(s, errors='coerce')
+        media = s.mean()
+        std   = s.std()
+        if std == 0 or pd.isna(std):
+            return pd.Series([0.0] * len(s), index=s.index)
+        return ((s - media) / std).round(3)
 
-    df = dg.merge(dp, on='Nombre', how='left').dropna(subset=['Nombre'])
+    # ── Velocidad (hoja "Velocidad") ──
+    dv = pd.read_excel(path, sheet_name='Velocidad', header=0)
+    dv.columns = [str(c).strip() for c in dv.columns]
+    dv = dv[dv['Nombre'].astype(str).str.startswith('UAO_')].copy()
+    dv['Nombre'] = dv['Nombre'].astype(str).str.strip()
+    # z-score por distancia * -1 (menos tiempo = mejor), luego TSA
+    dv['Z_10m_py'] = zscore_col(dv['sprint_10m_p1']) * -1
+    dv['Z_20m_py'] = zscore_col(dv['sprint_20m_p1']) * -1
+    dv['Z_30m_py'] = zscore_col(dv['sprint_30m_p1']) * -1
+    dv['Vel_Z']    = dv[['Z_10m_py', 'Z_20m_py', 'Z_30m_py']].mean(axis=1).round(3)
+    dv = dv[['Nombre', 'sprint_10m_p1', 'sprint_20m_p1', 'sprint_30m_p1', 'Vel_Z']]
+
+    # ── 5-10-5 (hoja "5-10-5") ──
+    d5 = pd.read_excel(path, sheet_name='5-10-5', header=0)
+    d5 = d5[d5['Nombre'].astype(str).str.startswith('UAO_')].copy()
+    d5['Nombre'] = d5['Nombre'].astype(str).str.strip()
+    # Columnas por posición: col 1=tiempo intento 1, col 5=intento 2, col 9=intento 3
+    cols_d5 = d5.columns.tolist()
+    t1_col  = cols_d5[2]   # Tiempo promedio intento 1
+    t2_col  = cols_d5[6]   # Tiempo promedio intento 2
+    t3_col  = cols_d5[10]   # Tiempo promedio intento 3
+    d5['Z_510_1'] = zscore_col(d5[t1_col]) * -1
+    d5['Z_510_2'] = zscore_col(d5[t2_col]) * -1
+    d5['Z_510_3'] = zscore_col(d5[t3_col]) * -1
+    d5['Ag_Z']    = d5[['Z_510_1', 'Z_510_2', 'Z_510_3']].mean(axis=1).round(3)
+    d5 = d5[['Nombre', t1_col, t2_col, t3_col, 'Ag_Z']]
+    d5.columns = ['Nombre', 't510_1', 't510_2', 't510_3', 'Ag_Z']
+
+    # ── Stardrill (hoja "Stardrill") ──
+    dsd = pd.read_excel(path, sheet_name='Stardrill', header=0)
+    dsd = dsd[dsd['Nombre'].astype(str).str.startswith('UAO_')].copy()
+    dsd['Nombre'] = dsd['Nombre'].astype(str).str.strip()
+    cols_dsd = dsd.columns.tolist()
+    s1_col   = cols_dsd[2]    # Tiempo promedio intento 1
+    s2_col   = cols_dsd[15]   # Tiempo promedio intento 2
+    dsd['Z_sd_1']  = zscore_col(dsd[s1_col]) * -1
+    dsd['Z_sd_2']  = zscore_col(dsd[s2_col]) * -1
+    dsd['Star_Z']  = dsd[['Z_sd_1', 'Z_sd_2']].mean(axis=1).round(3)
+    dsd = dsd[['Nombre', s1_col, s2_col, 'Star_Z']]
+    dsd.columns = ['Nombre', 'sd_t1', 'sd_t2', 'Star_Z']
+
+    # ── Merge todo con datos generales ──
+    df = dg.copy()
     df = df[df['Nombre'].str.startswith('UAO_')].reset_index(drop=True)
+    df = df.merge(dv,  on='Nombre', how='left')
+    df = df.merge(d5,  on='Nombre', how='left')
+    df = df.merge(dsd, on='Nombre', how='left')
+
+    # ── Overall Z y nivel ──
+    df['Overall_Z'] = df[['Vel_Z', 'Ag_Z', 'Star_Z']].mean(axis=1).round(3)
 
     def to_100(s):
         mn, mx = s.min(), s.max()
@@ -47,11 +97,10 @@ def load_data(path):
             return pd.Series([50.0] * len(s), index=s.index)
         return ((s - mn) / (mx - mn) * 100).round(1)
 
-    df['Vel_N']   = to_100(df['Velocidad'])
-    df['Ag_N']    = to_100(df['5_10_5'])
-    df['Star_N']  = to_100(df['StarDrill'])
+    df['Vel_N']   = to_100(df['Vel_Z'])
+    df['Ag_N']    = to_100(df['Ag_Z'])
+    df['Star_N']  = to_100(df['Star_Z'])
     df['Overall'] = df[['Vel_N', 'Ag_N', 'Star_N']].mean(axis=1).round(1)
-    df['Overall_Z'] = df[['Velocidad', '5_10_5', 'StarDrill']].mean(axis=1).round(3)
 
     def nivel(s):
         if s >= 66: return 'Alto'
@@ -59,73 +108,74 @@ def load_data(path):
         return 'Bajo'
     df['Nivel'] = df['Overall'].apply(nivel)
 
+    # Lee desde fila 0 para tomar los nombres reales de columna
     # ── Saltos desde "Saltos" ──
-    ds = pd.read_excel(
-    path,
-    sheet_name='Saltos',
-    header=35
-    )
-
+    # header=0 usa fila 0 como nombres de columna (tiene TODAS las métricas _1 _2 _3)
+    # Los datos de jugadores están en filas 1-27, se filtran por UAO_
+    ds = pd.read_excel(path, sheet_name='Saltos', header=0)
+    ds = ds[ds['Nombre'].astype(str).str.startswith('UAO_')].copy()
     ds['Nombre'] = ds['Nombre'].astype(str).str.strip()
+    ds = ds.reset_index(drop=True)
 
-    def avg_cols(ds_local, pattern):
-        if pattern in ds_local.columns:
-            return pd.to_numeric(ds_local[pattern], errors='coerce')
-
-        cols = [c for c in ds_local.columns if pattern in str(c)]
-
+    # ── Función: promedia los intentos _1, _2, _3 de un patrón ──
+    def prom_intentos(ds_local, patron):
+        """Promedia columnas que coincidan con patron + número de intento."""
+        cols = [c for c in ds_local.columns
+                if str(c).startswith(patron) and str(c)[-1].isdigit()]
         if not cols:
             return pd.Series([np.nan] * len(ds_local), index=ds_local.index)
+        return ds_local[cols].apply(pd.to_numeric, errors='coerce').mean(axis=1)
 
-        return ds_local[cols].apply(
-            pd.to_numeric,
-            errors='coerce'
-        ).mean(axis=1)
-    
-    # ── Mapeo exacto verificado con el Excel real ──
-    jump_cols = {
-        # CMJ usando Z-score
-        'cmj_rfd_exc':    'braking_RFD_cmj_z',
-        'cmj_altura':     'jump_height_cmj_z',
-        'cmj_potencia':   'avg_propulsive_power_cmj_z',
-        'cmj_aterrizaje': 'peak_landing_force_cmj_z',
+    # ── Función: calcula z-score del grupo ──
+    def zscore_grupo(serie):
+        """z = (valor - media) / desviación estándar del grupo."""
+        media = serie.mean()
+        std   = serie.std()
+        if std == 0 or pd.isna(std):
+            return pd.Series([0.0] * len(serie), index=serie.index)
+        return ((serie - media) / std).round(3)
 
-        # SJ
-        'sj_rfd_conc':    'propulsive_RFD_sj_',
-        'sj_altura':      'jump_height_sj_',
-        'sj_potencia':    'avg_propulsive_power_sj_',
-        'sj_aterrizaje':  'peak_landing_force_sj_',
+    # ── Promediar intentos crudos (_1, _2, _3) ──
+    # CMJ
+    ds['cmj_altura_raw']     = prom_intentos(ds, 'jump_height_cmj_')
+    ds['cmj_vuelo_raw']      = prom_intentos(ds, 'flight_time_cmj_')
+    ds['cmj_potencia_raw']   = prom_intentos(ds, 'avg_propulsive_power_cmj_')
+    ds['cmj_aterrizaje_raw'] = prom_intentos(ds, 'peak_landing_force_cmj_')
+    ds['cmj_rsi_raw']        = prom_intentos(ds, 'RSI_cmj_')
 
-        # DJ
-        'dj_aterrizaje':  'peak_braking_force_dj_',
-        'dj_tiempo':      'time_to_peak_braking_force_dj_',
-        'dj_rsi':         'RSI__dj_',
-        'dj_altura':      'jump_height_dj_',
-        'dj_impacto':     'impact_peak_dj_',
-    }
+    # SJ
+    ds['sj_altura_raw']     = prom_intentos(ds, 'jump_height_sj_')
+    ds['sj_vuelo_raw']      = prom_intentos(ds, 'flight_time_sj_')
+    ds['sj_potencia_raw']   = prom_intentos(ds, 'avg_propulsive_power_sj_')
+    ds['sj_aterrizaje_raw'] = prom_intentos(ds, 'peak_landing_force_sj_')
 
-    new_cols = {}
+    # DJ
+    ds['dj_altura_raw']     = prom_intentos(ds, 'jump_height_dj_')
+    ds['dj_vuelo_raw']      = prom_intentos(ds, 'flight_time_dj_')
+    ds['dj_potencia_raw']   = prom_intentos(ds, 'avg_propulsive_power_dj_')
+    ds['dj_aterrizaje_raw'] = prom_intentos(ds, 'peak_braking_force_dj_')
+    ds['dj_rsi_raw']        = prom_intentos(ds, 'RSI__dj_')
 
-    for key, pat in jump_cols.items():
-        new_cols[key] = avg_cols(ds, pat)
+    # ── Calcular z-score automático por grupo ──
+    raw_cols = [
+        'cmj_altura_raw', 'cmj_vuelo_raw', 'cmj_potencia_raw',
+        'cmj_aterrizaje_raw', 'cmj_rsi_raw',
+        'sj_altura_raw', 'sj_vuelo_raw', 'sj_potencia_raw', 'sj_aterrizaje_raw',
+        'dj_altura_raw', 'dj_vuelo_raw', 'dj_potencia_raw',
+        'dj_aterrizaje_raw', 'dj_rsi_raw',
+    ]
+    for col in raw_cols:
+        z_col = col.replace('_raw', '_z')
+        z = zscore_grupo(pd.to_numeric(ds[col], errors='coerce'))
+        ds[z_col] = (-z).round(3)
 
-    ds = pd.concat(
-        [ds, pd.DataFrame(new_cols)],
-        axis=1
-
-    )
-
-    keep = ['Nombre'] + list(jump_cols.keys())
+    # ── Merge con df principal ──
+    keep = ['Nombre'] + raw_cols + [c.replace('_raw', '_z') for c in raw_cols]
     ds   = ds[keep].copy()
-    df['Nombre'] = df['Nombre'].astype(str).str.strip()
     ds['Nombre'] = ds['Nombre'].astype(str).str.strip()
+    df['Nombre'] = df['Nombre'].astype(str).str.strip()
 
     df = df.merge(ds, on='Nombre', how='left')
-    print(df[['Nombre',
-          'cmj_rfd_exc',
-          'cmj_altura',
-          'cmj_potencia',
-          'cmj_aterrizaje']].head())
     df = df.sort_values('Overall', ascending=False).reset_index(drop=True)
     return df
 
@@ -168,14 +218,15 @@ BG    = '#F4F5F8'
 SURF  = '#FFFFFF'
 SURF2 = '#EEF0F5'
 SURF3 = '#E4E7EE'
-TEXT  = '#1A1D29'
-MUTED = '#6B7280'
-FAINT = "#717174"
-HOT   = '#DC2626'
-WARM  = '#EA7E2E'
-COOL  = '#2563EB'
-TEAL  = '#0D9488'
-GOLD  = '#CA8A04'
+TEXT  = "#0A0B0F"
+MUTED = "#030303"
+FAINT = "#030303"
+HOT   = "#BE0202"
+WARM  = "#FFF127"
+COOL  = '#1D4ED8'
+TEAL  = "#009C22"
+GOLD  = "#FFDD1F"
+
 
 RADAR_COLORS = [
     '#3B82F6','#E8402A','#14B8A6','#F5C542','#8B5CF6',
@@ -219,12 +270,42 @@ def sparkline_fig(values, color, height=28):
     )
     return fig
 
+
+def build_highlight_traces(sub_full, highlights):
+    """
+    Devuelve una lista de filas especiales (mejor, promedio, peor)
+    para agregar al radar de rendimiento físico.
+    sub_full: df completo del equipo (todos los jugadores).
+    """
+    traces = []
+
+    if 'best' in highlights:
+        best_row = sub_full.loc[sub_full['Overall_Z'].idxmax()].copy()
+        best_row['Nombre'] = f'★ Mejor ({best_row["Nombre"]})'
+        traces.append(('best', best_row))
+
+    if 'avg' in highlights:
+        avg_series = pd.Series({
+            'Nombre':  'Promedio grupo',
+            'Vel_Z':   sub_full['Vel_Z'].mean(),
+            'Ag_Z':    sub_full['Ag_Z'].mean(),
+            'Star_Z':  sub_full['Star_Z'].mean(),
+        })
+        traces.append(('avg', avg_series))
+
+    if 'worst' in highlights:
+        worst_row = sub_full.loc[sub_full['Overall_Z'].idxmin()].copy()
+        worst_row['Nombre'] = f'▼ Peor ({worst_row["Nombre"]})'
+        traces.append(('worst', worst_row))
+
+    return traces
+
 # ══════════════════════════════════════════
 # FIGURAS — RENDIMIENTO
 # ══════════════════════════════════════════
-def fig_radar(sub):
+def fig_radar(sub, highlight_traces=None):
     labels  = ['Velocidad', '5-10-5', 'Star Drill']
-    cols    = ['Velocidad', '5_10_5', 'StarDrill']
+    cols    = ['Vel_Z', 'Ag_Z', 'Star_Z']
     offset  = 3.5
     axis_max = 7.0
     tick_vals = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5]
@@ -248,6 +329,29 @@ def fig_radar(sub):
             marker=dict(size=5 if len(sub) <= 4 else 3),
             hovertemplate='<br>'.join(hover_lines) + '<extra>' + row['Nombre'] + '</extra>',
         ))
+
+
+     # ── Trazas especiales (mejor, promedio, peor) ──
+    highlight_colors = {'best': TEAL, 'avg': COOL, 'worst': HOT}
+    highlight_dash   = {'best': 'solid', 'avg': 'dash', 'worst': 'dot'}
+
+    for kind, row in (highlight_traces or []):
+        col  = highlight_colors[kind]
+        dash = highlight_dash[kind]
+        hex_ = col.lstrip('#')
+        r, g, b = int(hex_[:2], 16), int(hex_[2:4], 16), int(hex_[4:], 16)
+        z_cols      = ['Vel_Z', 'Ag_Z', 'Star_Z']
+        r_vals      = [(row.get(zc, 0) + offset) for zc in z_cols]
+        hover_lines = [f"<b>{lbl}</b>: z={row.get(zc, 0):+.3f}"
+                       for lbl, zc in zip(labels, z_cols)]
+        fig.add_trace(go.Scatterpolar(
+            r=r_vals, theta=labels, fill='toself', name=row['Nombre'],
+            line=dict(color=col, width=2.8, dash=dash),
+            fillcolor=f'rgba({r},{g},{b},0.08)',
+            marker=dict(size=6),
+            hovertemplate='<br>'.join(hover_lines) + '<extra>' + row['Nombre'] + '</extra>',
+        ))
+
     fig.update_layout(
         **PLOT_BASE, height=340,
         polar=dict(
@@ -262,9 +366,9 @@ def fig_radar(sub):
             ),
             angularaxis=dict(gridcolor=FAINT, tickfont=dict(size=12, color=MUTED)),
         ),
-        showlegend=len(sub) <= 8,
+        showlegend=True,
         legend=dict(font=dict(size=10, color=MUTED), bgcolor='rgba(0,0,0,0)',
-                    x=1.05, y=0.5),
+                    x=1.05, y=0.1),
     )
     return fig
 
@@ -284,8 +388,9 @@ def fig_bar(sub):
         text=sub['Overall_Z'].round(2),
         textposition='outside',
         textfont=dict(color=MUTED, size=10),
-        customdata=list(zip(sub['Nivel'], sub['Velocidad'],
-                            sub['5_10_5'], sub['StarDrill'])),
+
+        customdata=list(zip(sub['Nivel'], sub['Vel_Z'],
+                            sub['Ag_Z'], sub['Star_Z'])),
         hovertemplate=(
             '<b>%{y}</b><br>Z promedio: %{x:.2f} · Nivel: %{customdata[0]}<br>'
             'Vel Z: %{customdata[1]:.3f} | 5-10-5 Z: %{customdata[2]:.3f} | '
@@ -374,35 +479,34 @@ JUMP_CFG = {
     'cmj': {
         'title': 'CMJ — Countermovement Jump',
         'color': HOT,
-        # CMJ solo tiene braking_RFD en el Excel → se usa para RFD excéntrica
-        # propulsive_RFD no existe en CMJ; se omite RFD concéntrica para no inventar datos
         'metrics': [
-            ('RFD excéntrica (frenado)', 'cmj_rfd_exc',    HOT,  'z'),
-            ('Altura de salto',          'cmj_altura',     TEAL, 'z'),
-            ('Potencia propulsiva',      'cmj_potencia',   GOLD, 'z'),
-            ('Fuerza de aterrizaje',     'cmj_aterrizaje', COOL, 'z'),
+            # (etiqueta, col_raw, col_z, color, unidad)
+            ('Altura de salto',      'cmj_altura_raw',     'cmj_altura_z',     TEAL, 'cm'),
+            ('Tiempo de vuelo',      'cmj_vuelo_raw',      'cmj_vuelo_z',      COOL, 'ms'),
+            ('Fuerza de impulso',    'cmj_potencia_raw',   'cmj_potencia_z',   GOLD, 'W'),
+            ('Fuerza de aterrizaje', 'cmj_aterrizaje_raw', 'cmj_aterrizaje_z', HOT,  'N'),
+            ('RSI',                  'cmj_rsi_raw',        'cmj_rsi_z',        '#8B5CF6', ''),
         ]
     },
     'sj': {
         'title': 'SJ — Squat Jump',
         'color': COOL,
-        # SJ solo tiene propulsive_RFD → se usa para RFD concéntrica
         'metrics': [
-            ('RFD concéntrica',      'sj_rfd_conc',    HOT,  'N/s'),
-            ('Altura de salto',      'sj_altura',      TEAL, 'm'),
-            ('Potencia propulsiva',  'sj_potencia',    GOLD, 'W'),
-            ('Fuerza de aterrizaje', 'sj_aterrizaje',  COOL, 'N'),
+            ('Altura de salto',      'sj_altura_raw',     'sj_altura_z',     TEAL, 'cm'),
+            ('Tiempo de vuelo',      'sj_vuelo_raw',      'sj_vuelo_z',      COOL, 'ms'),
+            ('Fuerza de impulso',    'sj_potencia_raw',   'sj_potencia_z',   GOLD, 'W'),
+            ('Fuerza de aterrizaje', 'sj_aterrizaje_raw', 'sj_aterrizaje_z', HOT,  'N'),
         ]
     },
     'dj': {
         'title': 'DJ',
         'color': TEAL,
         'metrics': [
-            ('Fuerza de aterrizaje', 'dj_aterrizaje', HOT,  'N'),
-            ('Tiempo de aterrizaje', 'dj_tiempo',     COOL, 'ms'),
-            ('RSI',                  'dj_rsi',        GOLD, ''),
-            ('Altura de salto',      'dj_altura',     TEAL, 'm'),
-            ('Fuerza de impacto',    'dj_impacto',    WARM, 'BW'),
+            ('Altura de salto',      'dj_altura_raw',     'dj_altura_z',     TEAL, 'cm'),
+            ('Tiempo de vuelo',      'dj_vuelo_raw',      'dj_vuelo_z',      COOL, 'ms'),
+            ('Fuerza de impulso',    'dj_potencia_raw',   'dj_potencia_z',   GOLD, 'W'),
+            ('Fuerza de aterrizaje', 'dj_aterrizaje_raw', 'dj_aterrizaje_z', HOT,  'N'),
+            ('RSI',                  'dj_rsi_raw',        'dj_rsi_z',        '#8B5CF6', ''),
         ]
     },
 }
@@ -431,9 +535,10 @@ def normalize_jump_metrics(jump_type, player_ids):
 
 def fig_jump_radar(jump_type, player_ids):
     cfg    = JUMP_CFG[jump_type]
-    labels = [lbl for lbl, _, _, _ in cfg['metrics']]
-    cols   = [col for _, col, _, _ in cfg['metrics']]
-    units  = [u   for _, _, _, u   in cfg['metrics']]
+    labels   = [lbl     for lbl, _, _, _, _    in cfg['metrics']]
+    cols_raw = [col_raw for _, col_raw, _, _, _ in cfg['metrics']]
+    cols_z   = [col_z   for _, _, col_z, _, _   in cfg['metrics']]
+    units    = [u       for _, _, _, _, u        in cfg['metrics']]
 
     sub = df[df['Nombre'].isin(player_ids)].copy()
     if sub.empty:
@@ -458,16 +563,16 @@ def fig_jump_radar(jump_type, player_ids):
 
             r_vals      = []
             hover_lines = []
-            for col, lbl, unit in zip(cols, labels, units):
-                z = pd.to_numeric(row.get(col, np.nan), errors='coerce')
-                if col in INVERT_CMJ:
+            for col_raw, col_z, lbl, unit in zip(cols_raw, cols_z, labels, units):
+                z = pd.to_numeric(row.get(col_z, np.nan), errors='coerce')
+                if col_z in INVERT_CMJ:
                     z = -z  # invertir: menos fuerza de aterrizaje = mejor
                 r_vals.append((z + offset) if pd.notna(z) else offset)
 
-                inv_note = ' ↓mejor' if col in INVERT_CMJ else ''
-                if pd.notna(row.get(col, np.nan)):
+                inv_note = ' ↓mejor' if col_z in INVERT_CMJ else ''
+                if pd.notna(row.get(col_z, np.nan)):
                     hover_lines.append(
-                        f"<b>{lbl}</b>{inv_note}: z={row.get(col, np.nan):+.3f}"
+                        f"<b>{lbl}</b>{inv_note}: z={row.get(col_z, np.nan):+.3f}"
                     )
                 else:
                     hover_lines.append(f"<b>{lbl}</b>: sin datos")
@@ -507,38 +612,33 @@ def fig_jump_radar(jump_type, player_ids):
 
     # ── SJ / DJ: normalización min-max 0-100 como antes ──
     invert_minmax = {'sj_aterrizaje', 'dj_aterrizaje', 'dj_tiempo', 'dj_impacto'}
-    norm_sub = df[df['Nombre'].isin(player_ids)][['Nombre'] + cols].copy()
-    for col in cols:
-        s = pd.to_numeric(norm_sub[col], errors='coerce')
-        mn, mx = s.min(), s.max()
-        if pd.isna(mn) or mx == mn:
-            norm_sub[col + '_N'] = 50.0
-        else:
-            norm = (s - mn) / (mx - mn) * 100
-            norm_sub[col + '_N'] = (100 - norm) if col in invert_minmax else norm
-        norm_sub[col + '_N'] = norm_sub[col + '_N'].round(1)
+    offset   = 3.5
+    axis_max = 7.0
+    tick_vals = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5]
+    tick_text = ['z=-3', 'z=-2', 'z=-1', 'z=0', 'z=+1', 'z=+2', 'z=+3']
 
     fig = go.Figure()
-    for i, (_, row) in enumerate(norm_sub.iterrows()):
+    for i, (_, row) in enumerate(sub.iterrows()):
         color = RADAR_COLORS[i % len(RADAR_COLORS)]
         hex_  = color.lstrip('#')
         r, g, b = int(hex_[:2], 16), int(hex_[2:4], 16), int(hex_[4:], 16)
 
-        orig_row = sub[sub['Nombre'] == row['Nombre']].iloc[0]
-        r_vals      = [row.get(col + '_N', 0) for col in cols]
+        r_vals      = []
         hover_lines = []
-        for col, lbl, unit in zip(cols, labels, units):
-            raw = orig_row.get(col, np.nan)
-            inv = ' ↓mejor' if col in invert_minmax else ''
-            hover_lines.append(
-                f"<b>{lbl}</b>{inv}: {raw:.3f} {unit}" if pd.notna(raw) else f"<b>{lbl}</b>: —"
-            )
+        for col_raw, col_z, lbl, unit in zip(cols_raw, cols_z, labels, units):
+            z   = pd.to_numeric(row.get(col_z, np.nan), errors='coerce')
+            raw = pd.to_numeric(row.get(col_raw, np.nan), errors='coerce')
+            r_vals.append((z + offset) if pd.notna(z) else offset)
+            if pd.notna(raw):
+                hover_lines.append(f"<b>{lbl}</b>: {raw:.2f} {unit} (z={z:+.2f})")
+            else:
+                hover_lines.append(f"<b>{lbl}</b>: sin datos")
 
         fig.add_trace(go.Scatterpolar(
             r=r_vals, theta=labels, fill='toself', name=row['Nombre'],
-            line=dict(color=color, width=2.5 if len(norm_sub) == 1 else 1.8),
+            line=dict(color=color, width=2.5 if len(sub) == 1 else 1.8),
             fillcolor=f'rgba({r},{g},{b},0.12)',
-            marker=dict(size=6 if len(norm_sub) <= 4 else 4),
+            marker=dict(size=6 if len(sub) <= 4 else 4),
             hovertemplate='<br>'.join(hover_lines) + '<extra>' + row['Nombre'] + '</extra>',
         ))
 
@@ -547,8 +647,9 @@ def fig_jump_radar(jump_type, player_ids):
         polar=dict(
             bgcolor=SURF2,
             radialaxis=dict(
-                visible=True, range=[0, 100],
-                tickvals=[25, 50, 75, 100],
+                visible=True, range=[0, axis_max],
+                tickvals=tick_vals,
+                ticktext=tick_text,
                 gridcolor=FAINT,
                 tickfont=dict(size=9, color=MUTED),
                 tickcolor='rgba(0,0,0,0)',
@@ -558,11 +659,6 @@ def fig_jump_radar(jump_type, player_ids):
         showlegend=True,
         legend=dict(font=dict(size=11, color=MUTED), bgcolor='rgba(0,0,0,0)',
                     orientation='h', y=-0.12, x=0.5, xanchor='center'),
-        annotations=[dict(
-            text='Normalizado 0-100 · más área = mejor · ↓mejor = métrica invertida',
-            x=0.5, y=1.06, xref='paper', yref='paper',
-            showarrow=False, font=dict(size=10, color=FAINT), xanchor='center',
-        )],
         transition=dict(duration=400, easing='cubic-in-out'),
     )
     return fig
@@ -570,16 +666,17 @@ def fig_jump_radar(jump_type, player_ids):
 def fig_jump_bar(jump_type, player_ids):
     """Barras agrupadas con valores reales (sin normalizar) por jugador."""
     cfg    = JUMP_CFG[jump_type]
-    labels = [lbl for lbl, _, _, _ in cfg['metrics']]
-    cols   = [col for _, col, _, _ in cfg['metrics']]
-    units  = [u   for _, _, _, u   in cfg['metrics']]
+    labels   = [lbl   for lbl, _, _, _, _  in cfg['metrics']]
+    cols_raw = [cr    for _, cr, _, _, _    in cfg['metrics']]
+    cols_z   = [cz    for _, _, cz, _, _    in cfg['metrics']]
+    units    = [u     for _, _, _, _, u     in cfg['metrics']]
 
     sub = df[df['Nombre'].isin(player_ids)].copy()
     if sub.empty:
         return None
 
     # Verificar que al menos una métrica tiene datos
-    has_data = any(col in sub.columns and sub[col].notna().any() for col in cols)
+    has_data = any(col in sub.columns and sub[col].notna().any() for col in cols_z)
     if not has_data:
         return None
 
@@ -587,12 +684,16 @@ def fig_jump_bar(jump_type, player_ids):
     for i, (_, row) in enumerate(sub.iterrows()):
         color = RADAR_COLORS[i % len(RADAR_COLORS)]
         y_vals, x_lbls, hover_text = [], [], []
-        for lbl, col, unit in zip(labels, cols, units):
-            v = row.get(col, np.nan)
-            if pd.notna(v):
-                y_vals.append(round(float(v), 3))
+        for lbl, col_raw, col_z, unit in zip(labels, cols_raw, cols_z, units):
+            v_raw = row.get(col_raw, np.nan)
+            v_z   = row.get(col_z, np.nan)
+            if pd.notna(v_z):
+                y_vals.append(round(float(v_z), 3))
                 x_lbls.append(lbl)
-                hover_text.append(f'{lbl}: {v:.3f} {unit}')
+                hover_text.append(
+                    f'{lbl}: {v_raw:.2f} {unit} (z={v_z:+.2f})' if pd.notna(v_raw)
+                    else f'{lbl}: z={v_z:+.2f}'
+                )
         if y_vals:
             fig.add_trace(go.Bar(
                 name=row['Nombre'],
@@ -621,13 +722,12 @@ def jump_metric_cards(jump_type, player_ids):
     cfg = JUMP_CFG[jump_type]
     sub = df[df['Nombre'].isin(player_ids)]
     cards = []
-    for label, col, color, unit in cfg['metrics']:
-        vals = sub[col].dropna() if col in sub.columns else pd.Series(dtype=float)
+    for label, col_raw, col_z, color, unit in cfg['metrics']:
+        vals = sub[col_raw].dropna() if col_raw in sub.columns else pd.Series(dtype=float)
         if len(vals) > 0:
-            val_display = f'{vals.mean():.3f}'
+            val_display = f'{vals.mean():.2f}'
             sub_lbl = f'Promedio · n={len(vals)}'
-            # mini barra de progreso (normalizada dentro del equipo)
-            mn, mx = df[col].min(), df[col].max()
+            mn, mx = df[col_raw].min(), df[col_raw].max()
             pct = ((vals.mean() - mn) / (mx - mn) * 100) if mx != mn else 50
             pct = round(pct, 1)
         else:
@@ -674,7 +774,6 @@ app = dash.Dash(
     ],
     suppress_callback_exceptions=True,
 )
-server = app.server
 app.title = 'UAO Fútbol Sala'
 
 # ── CSS de animaciones ──
@@ -797,7 +896,7 @@ app.layout = html.Div([
                 id='tab-btn-salt', n_clicks=0, style=sidebar_link_style(False),
             ),
         ], style={'width': '210px', 'flexShrink': '0', 'background': SURF,
-                  'border': f'1px solid {FAINT}', 'borderRadius': '12px',
+                  'border': f'1px solid {TEXT}', 'borderRadius': '12px',
                   'padding': '14px', 'alignSelf': 'flex-start',
                   'position': 'sticky', 'top': '92px'}),
 
@@ -812,30 +911,36 @@ app.layout = html.Div([
                                                 'textTransform': 'uppercase', 'letterSpacing': '.8px',
                                                 'fontWeight': '600', 'marginRight': '14px',
                                                 'whiteSpace': 'nowrap'}),
-                html.Div(id='pills-container',
-                         style={'display': 'flex', 'flexWrap': 'wrap', 'flex': '1'}),
+                dcc.Dropdown(
+                    id='rend-player-select',
+                    options=[{'label': pid, 'value': pid}
+                             for pid in sorted(ALL_IDS, key=lambda x: int(x.split('_')[1]))],
+                    value=[],
+                    multi=True,
+                    placeholder='Seleccionar deportistas...',
+                    style={'flex': '1', 'fontSize': '12px', 'fontFamily': 'Inter,sans-serif'},
+                    className='jump-dropdown',
+                ),
                 html.Div([
-                    html.Button('↩', id='btn-undo', n_clicks=0, title='Deshacer',
-                                disabled=True,
-                                style={'padding': '6px 10px', 'borderRadius': '8px',
-                                       'background': 'transparent',
-                                       'border': f'1px solid {FAINT}', 'color': MUTED,
-                                       'fontSize': '14px', 'cursor': 'pointer',
-                                       'marginRight': '6px', 'fontFamily': 'Inter,sans-serif'}),
-                    html.Button('↺', id='btn-redo', n_clicks=0, title='Rehacer',
-                                disabled=True,
-                                style={'padding': '6px 10px', 'borderRadius': '8px',
-                                       'background': 'transparent',
-                                       'border': f'1px solid {FAINT}', 'color': MUTED,
-                                       'fontSize': '14px', 'cursor': 'pointer',
-                                       'marginRight': '6px', 'fontFamily': 'Inter,sans-serif'}),
-                ], style={'display': 'flex', 'alignItems': 'center', 'marginLeft': 'auto'}),
+                    dcc.Checklist(
+                        id='rend-highlights',
+                        options=[
+                            {'label': ' Alto rendimiento', 'value': 'best'},
+                            {'label': ' Rendimiento promedio', 'value': 'avg'},
+                            {'label': ' Bajo rendimiento',  'value': 'worst'},
+                        ],
+                        value=[],
+                        inline=True,
+                        style={'fontSize': '12px', 'color': MUTED,
+                               'fontFamily': 'Inter,sans-serif'},
+                        inputStyle={'marginRight': '4px', 'accentColor': TEAL},
+                        labelStyle={'marginRight': '14px', 'cursor': 'pointer'},
+                    ),
+                ], style={'marginLeft': '16px', 'whiteSpace': 'nowrap'}),
             ], style={'background': SURF, 'border': f'1px solid {FAINT}', 'borderRadius': '12px',
                       'padding': '13px 18px', 'marginBottom': '14px',
                       'display': 'flex', 'alignItems': 'center'}),
 
-            html.Div(id='hist-crumb',
-                     style={'fontSize': '11px', 'color': FAINT, 'marginBottom': '14px'}),
 
             dbc.Row(id='stats-row', className='g-2 mb-3'),
 
@@ -880,16 +985,16 @@ app.layout = html.Div([
                     html.Div([
                         html.Span('+1', style={'color': TEAL, 'fontWeight': '700',
                                                 'marginRight': '8px'}),
-                        html.Span('= 1 desviación estándar por encima del promedio',
+                        html.Span('= Desviación estándar por encima del promedio',
                                   style={'color': MUTED, 'fontSize': '12px'}),
                     ], style={'marginBottom': '8px'}),
                     html.Div([
                         html.Span('-1', style={'color': HOT, 'fontWeight': '700',
                                                 'marginRight': '8px'}),
-                        html.Span('= 1 desviación estándar por debajo del promedio',
+                        html.Span('= Desviación estándar por debajo del promedio',
                                   style={'color': MUTED, 'fontSize': '12px'}),
                     ], style={'marginBottom': '14px'}),
-                    html.Div(style={'height': '1px', 'background': FAINT,
+                    html.Div(style={'height': '1px', 'background': TEXT,
                                     'marginBottom': '12px'}),
                     html.P('Valores positivos indican mejor rendimiento relativo al equipo.',
                            style={'fontSize': '12px', 'color': MUTED, 'lineHeight': '1.5',
@@ -919,7 +1024,7 @@ app.layout = html.Div([
                                        'background': 'transparent', 'color': MUTED,
                                        'fontFamily': 'Inter,sans-serif',
                                        'marginRight': '4px', 'transition': 'all .25s'}),
-                    html.Button('Drop Jump', id='jt-dj', n_clicks=0,
+                    html.Button('DJ', id='jt-dj', n_clicks=0,
                                 style={'padding': '8px 22px', 'borderRadius': '6px',
                                        'fontSize': '13px', 'fontWeight': '500',
                                        'cursor': 'pointer', 'border': 'none',
@@ -938,8 +1043,9 @@ app.layout = html.Div([
                                      'whiteSpace': 'nowrap'}),
                     dcc.Dropdown(
                         id='jump-player-select',
-                        options=[{'label': pid, 'value': pid} for pid in ALL_IDS],
-                        value=ALL_IDS[:3],   # primeros 3 por defecto
+                        options=[{'label': pid, 'value': pid}
+                                 for pid in sorted(ALL_IDS, key=lambda x: int(x.split('_')[1]))],
+                        value=[],
                         multi=True,
                         placeholder='Seleccionar jugadores...',
                         style={
@@ -971,6 +1077,44 @@ app.layout = html.Div([
                     md=6, style={'marginBottom': '14px'}
                 ),
             ]),
+
+            html.Div([
+                html.Div([
+                    html.Span('ⓘ ', style={'color': COOL, 'fontSize': '13px'}),
+                    html.Span('¿Cómo interpretar?',
+                              style={'fontSize': '11px', 'color': MUTED,
+                                     'textTransform': 'uppercase', 'letterSpacing': '.8px',
+                                     'fontWeight': '600'}),
+                ], style={**header_style, 'border': 'none', 'padding': '13px 18px 10px'}),
+                html.Div([
+                    html.P('Los valores están expresados en Z-score.',
+                           style={'fontSize': '12.5px', 'color': TEXT, 'marginBottom': '12px',
+                                  'lineHeight': '1.5'}),
+                    html.Div([
+                        html.Span('0', style={'color': MUTED, 'fontWeight': '700',
+                                               'marginRight': '8px'}),
+                        html.Span('= Promedio del grupo',
+                                  style={'color': MUTED, 'fontSize': '12px'}),
+                    ], style={'marginBottom': '8px'}),
+                    html.Div([
+                        html.Span('+1', style={'color': TEAL, 'fontWeight': '700',
+                                                'marginRight': '8px'}),
+                        html.Span('= Desviación estándar por encima del promedio',
+                                  style={'color': MUTED, 'fontSize': '12px'}),
+                    ], style={'marginBottom': '8px'}),
+                    html.Div([
+                        html.Span('-1', style={'color': HOT, 'fontWeight': '700',
+                                                'marginRight': '8px'}),
+                        html.Span('= Desviación estándar por debajo del promedio',
+                                  style={'color': MUTED, 'fontSize': '12px'}),
+                    ], style={'marginBottom': '14px'}),
+                    html.Div(style={'height': '1px', 'background': FAINT,
+                                    'marginBottom': '12px'}),
+                    html.P('Valores positivos indican mejor rendimiento relativo al equipo.',
+                           style={'fontSize': '12px', 'color': MUTED, 'lineHeight': '1.5',
+                                  'marginBottom': '0'}),
+                ], style={'padding': '0 18px 18px'}),
+            ], style={**card_style, 'marginBottom': '14px'}),
         ]),
 
         ], style={'flex': '1', 'minWidth': '0'}),
@@ -979,9 +1123,6 @@ app.layout = html.Div([
               'maxWidth': '1500px', 'margin': '0 auto'}),
 
     # ── Stores ──
-    dcc.Store(id='st-sel',  data=ALL_IDS),
-    dcc.Store(id='st-hist', data=[ALL_IDS]),
-    dcc.Store(id='st-hidx', data=0),
     dcc.Store(id='st-tab',  data='rend'),
     dcc.Store(id='st-jtab', data='cmj'),
 
@@ -989,100 +1130,45 @@ app.layout = html.Div([
           'fontFamily': 'Inter,sans-serif'})
 
 
-# ══════════════════════════════════════════
-# CALLBACKS
-# ══════════════════════════════════════════
-
-# 1 · Selección de deportistas (rendimiento)
-@app.callback(
-    Output('st-sel',  'data'),
-    Output('st-hist', 'data'),
-    Output('st-hidx', 'data'),
-    Input({'type': 'pill', 'index': ALL}, 'n_clicks'),
-    Input('btn-undo', 'n_clicks'),
-    Input('btn-redo', 'n_clicks'),
-    State('st-sel',  'data'),
-    State('st-hist', 'data'),
-    State('st-hidx', 'data'),
-    prevent_initial_call=True,
-)
-def update_selection(pill_clicks, undo, redo, cur, hist, hidx):
-    ctx = callback_context
-    if not ctx.triggered:
-        return no_update, no_update, no_update
-    tid = ctx.triggered[0]['prop_id']
-
-    if 'btn-undo' in tid:
-        if hidx > 0: hidx -= 1
-        return hist[hidx], hist, hidx
-    if 'btn-redo' in tid:
-        if hidx < len(hist) - 1: hidx += 1
-        return hist[hidx], hist, hidx
-
-    pid = json.loads(tid.split('.')[0])['index']
-    if pid == '__all__':
-        new = ALL_IDS[:] if set(cur) != set(ALL_IDS) else [ALL_IDS[0]]
-    else:
-        new = list(cur)
-        if pid in new:
-            if len(new) > 1: new.remove(pid)
-        else:
-            new.append(pid)
-
-    hist = hist[:hidx + 1] + [new]
-    return new, hist, len(hist) - 1
-
-
-# 2 · Pills
-@app.callback(
-    Output('pills-container', 'children'),
-    Input('st-sel', 'data'),
-)
-def render_pills(sel):
-    sel_set = set(sel)
-    all_on  = sel_set == set(ALL_IDS)
-
-    def pill_style(active, color=None):
-        base = {'padding': '5px 12px', 'borderRadius': '20px', 'fontSize': '12px',
-                'fontWeight': '500', 'cursor': 'pointer', 'fontFamily': 'Inter,sans-serif',
-                'marginRight': '4px', 'marginBottom': '4px', 'transition': 'all .2s',
-                'border': '1px solid'}
-        if active and color:
-            base.update({'borderColor': color, 'background': color + '22', 'color': color})
-        elif active:
-            base.update({'borderColor': TEXT, 'background': SURF3, 'color': TEXT})
-        else:
-            base.update({'borderColor': FAINT, 'background': 'transparent', 'color': MUTED})
-        return base
-
-    pills = [html.Button('Todos', id={'type': 'pill', 'index': '__all__'},
-                         n_clicks=0, style=pill_style(all_on))]
-    for pid in ALL_IDS:
-        row   = df[df['Nombre'] == pid].iloc[0]
-        color = nc(row['Nivel'])
-        pills.append(html.Button(
-            pid, id={'type': 'pill', 'index': pid},
-            n_clicks=0, style=pill_style(pid in sel_set, color)
-        ))
-    return pills
-
-
 # 3 · Charts + stats + crumb + undo/redo
 @app.callback(
     Output('chart-radar', 'figure'),
     Output('chart-bar',   'figure'),
     Output('stats-row',   'children'),
-    Output('hist-crumb',  'children'),
-    Output('btn-undo',    'disabled'),
-    Output('btn-redo',    'disabled'),
-    Input('st-sel',  'data'),
-    Input('st-hidx', 'data'),
-    State('st-hist', 'data'),
+    Input('rend-player-select', 'value'),
+    Input('rend-highlights',    'value'),
 )
-def update_charts(sel, hidx, hist):
+def update_charts(sel, highlights):
+    sel        = sel or []
+    highlights = highlights or []
+
     sub = df[df['Nombre'].isin(sel)].sort_values('Overall', ascending=False)
     n   = len(sub)
-    avg = sub['Overall'].mean() if n else 0
+
+    # Si no hay selección individual ni highlights, mostrar vacío
+    if not sel and not highlights:
+        empty_fig = go.Figure().update_layout(
+            paper_bgcolor=SURF, plot_bgcolor=SURF,
+            xaxis=dict(visible=False), yaxis=dict(visible=False),
+            annotations=[dict(
+                text='Selecciona al menos un deportista',
+                x=0.5, y=0.5, xref='paper', yref='paper',
+                showarrow=False, font=dict(size=13, color=MUTED),
+            )]
+        )
+        empty_stats = [
+            dbc.Col(html.Div([
+                html.Div('—', style={'fontFamily': 'Space Grotesk,sans-serif',
+                                     'fontSize': '24px', 'fontWeight': '700',
+                                     'color': TEXT, 'lineHeight': '1', 'marginBottom': '3px'}),
+                html.Div(lbl, style={'fontSize': '10px', 'color': MUTED,
+                                     'textTransform': 'uppercase', 'letterSpacing': '.6px'}),
+            ], style={'background': SURF, 'border': f'1px solid {FAINT}',
+                      'borderRadius': '10px', 'padding': '14px 16px'}),
+            xs=6, md=3, className='g-2')
+            for lbl in ['Total deportistas', 'Nivel alto', 'Nivel medio', 'Nivel bajo']
+        ]
+        return empty_fig, empty_fig, empty_stats
 
     def stat_card(val, lbl, color, icon):
         return dbc.Col(html.Div([
@@ -1100,44 +1186,19 @@ def update_charts(sel, hidx, hist):
                                  'textTransform': 'uppercase', 'letterSpacing': '.6px'}),
         ], style={'background': SURF, 'border': f'1px solid {FAINT}',
                   'borderRadius': '10px', 'padding': '14px 16px'}),
-        xs=6, md=True, className='g-2')
+        xs=6, md=3, className='g-2')
 
     counts = sub['Nivel'].value_counts()
     stats  = [
-        stat_card(n, 'Total deportistas', COOL, '👥'),
-        stat_card(counts.get('Alto', 0),  'Nivel alto',  TEAL, '↗'),
-        stat_card(counts.get('Medio', 0), 'Nivel medio', GOLD, '='),
-        stat_card(counts.get('Bajo', 0),  'Nivel bajo',  HOT,  '↓'),
-        stat_card(3, 'Métricas evaluadas', '#8B5CF6', '◈'),
+        stat_card(n,                       'Total deportistas', COOL, '👥'),
+        stat_card(counts.get('Alto',  0),  'Nivel alto',        TEAL, '↗'),
+        stat_card(counts.get('Medio', 0),  'Nivel medio',       GOLD, '='),
+        stat_card(counts.get('Bajo',  0),  'Nivel bajo',        HOT,  '↓'),
     ]
 
-    lbl   = ('todos' if n == len(ALL_IDS) else f'{n} deportista{"s" if n > 1 else ""}')
-    crumb = [html.Span('Vista actual: ', style={'color': FAINT}),
-             html.Span(lbl, style={'color': MUTED})]
+    highlight_traces = build_highlight_traces(df, highlights)
+    return (fig_radar(sub, highlight_traces), fig_bar(sub), stats)
 
-    return (fig_radar(sub), fig_bar(sub), stats, crumb,
-            hidx == 0, hidx >= len(hist) - 1)
-
-
-# 4 · Detalle al clic en barra
-@app.callback(
-    Output('detail-wrap', 'children'),
-    Input('chart-bar', 'clickData'),
-)
-def show_detail(click):
-    if not click:
-        return html.Div([
-            html.Div('○', style={'fontSize': '24px', 'color': FAINT, 'marginBottom': '6px'}),
-            html.Div('Selecciona un deportista en el gráfico para ver su detalle',
-                     style={'fontSize': '13px', 'color': FAINT}),
-        ], style={'display': 'flex', 'flexDirection': 'column',
-                  'alignItems': 'center', 'justifyContent': 'center', 'minHeight': '110px'})
-
-    pid  = click['points'][0]['y']
-    rows = df[df['Nombre'] == pid]
-    if rows.empty:
-        return no_update
-    return detail_card(rows.iloc[0])
 
 # 6 · Tabs principales
 @app.callback(
@@ -1200,7 +1261,11 @@ def jump_section(c_cmj, c_sj, c_dj, player_sel, main_tab, cur_tab):
     ctx = callback_context
     tid = ctx.triggered[0]['prop_id']
 
-    # Determinar sub-tab activo
+    # tab ya fue determinado arriba
+
+    sel = player_sel or []
+
+    # Determinar tab activo aunque no haya selección
     if 'jt-cmj' in tid:
         tab = 'cmj'
     elif 'jt-sj' in tid:
@@ -1208,9 +1273,34 @@ def jump_section(c_cmj, c_sj, c_dj, player_sel, main_tab, cur_tab):
     elif 'jt-dj' in tid:
         tab = 'dj'
     else:
-        tab = cur_tab  # cambio de jugadores, mantener tab
+        tab = cur_tab
 
-    sel = player_sel or ALL_IDS[:3]
+    if not sel:
+        empty_fig = go.Figure().update_layout(
+            paper_bgcolor=SURF, plot_bgcolor=SURF,
+            xaxis=dict(visible=False), yaxis=dict(visible=False),
+            annotations=[dict(
+                text='Selecciona al menos un deportista',
+                x=0.5, y=0.5, xref='paper', yref='paper',
+                showarrow=False, font=dict(size=13, color=MUTED),
+            )]
+        )
+        tab_colors = {'cmj': HOT, 'sj': COOL, 'dj': TEAL}
+        def jbtn_empty(t):
+            on = (t == tab)
+            return {'padding': '8px 22px', 'borderRadius': '6px', 'fontSize': '13px',
+                    'fontWeight': '600' if on else '500',
+                    'cursor': 'pointer', 'border': 'none',
+                    'fontFamily': 'Inter,sans-serif', 'transition': 'all .25s',
+                    'background': tab_colors[t] if on else 'transparent',
+                    'color': '#fff' if on else MUTED,
+                    'boxShadow': f'0 0 12px {tab_colors[t]}55' if on else 'none'}
+        return (
+            jbtn_empty('cmj'), jbtn_empty('sj'), jbtn_empty('dj'), tab,
+            html.Div(),
+            html.Div(dcc.Graph(figure=empty_fig, config={'displayModeBar': False})),
+            html.Div(dcc.Graph(figure=empty_fig, config={'displayModeBar': False})),
+        )
 
     # Estilos de botones
     tab_colors = {'cmj': HOT, 'sj': COOL, 'dj': TEAL}
@@ -1283,4 +1373,5 @@ def jump_section(c_cmj, c_sj, c_dj, player_sel, main_tab, cur_tab):
 # RUN
 # ══════════════════════════════════════════
 if __name__ == '__main__':
-    app.run(debug=False, port=8050)
+    print('\n🚀  Dashboard en  http://localhost:8050\n')
+    app.run(debug=True, port=8050)
