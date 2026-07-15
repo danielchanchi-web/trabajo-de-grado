@@ -141,9 +141,9 @@ def load_data(path):
     # CMJ
     ds['cmj_altura_raw']     = prom_intentos(ds, 'jump_height_cmj_')
     ds['cmj_vuelo_raw']      = prom_intentos(ds, 'flight_time_cmj_')
+    ds['cmj_rsi_raw']        = prom_intentos(ds, 'RSI_cmj_')
     ds['cmj_potencia_raw']   = prom_intentos(ds, 'avg_propulsive_power_cmj_')
     ds['cmj_aterrizaje_raw'] = prom_intentos(ds, 'peak_landing_force_cmj_')
-    ds['cmj_rsi_raw']        = prom_intentos(ds, 'RSI_cmj_')
 
     # SJ
     ds['sj_altura_raw']     = prom_intentos(ds, 'jump_height_sj_')
@@ -154,9 +154,9 @@ def load_data(path):
     # DJ
     ds['dj_altura_raw']     = prom_intentos(ds, 'jump_height_dj_')
     ds['dj_vuelo_raw']      = prom_intentos(ds, 'flight_time_dj_')
+    ds['dj_rsi_raw']        = prom_intentos(ds, 'RSI__dj_')
     ds['dj_potencia_raw']   = prom_intentos(ds, 'avg_propulsive_power_dj_')
     ds['dj_aterrizaje_raw'] = prom_intentos(ds, 'peak_braking_force_dj_')
-    ds['dj_rsi_raw']        = prom_intentos(ds, 'RSI__dj_')
 
     # ── Calcular z-score automático por grupo ──
     raw_cols = [
