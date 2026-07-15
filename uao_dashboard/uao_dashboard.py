@@ -142,6 +142,7 @@ def load_data(path):
     ds['cmj_altura_raw']     = prom_intentos(ds, 'jump_height_cmj_')
     ds['cmj_vuelo_raw']      = prom_intentos(ds, 'flight_time_cmj_')
     ds['cmj_rsi_raw']        = prom_intentos(ds, 'RSI_cmj_')
+    ds['cmj_takeoff_velocity_raw'] = prom_intentos(ds, 'takeoff_velocity_cmj_')
     ds['cmj_potencia_raw']   = prom_intentos(ds, 'avg_propulsive_power_cmj_')
     ds['cmj_aterrizaje_raw'] = prom_intentos(ds, 'peak_landing_force_cmj_')
 
@@ -160,8 +161,8 @@ def load_data(path):
 
     # ── Calcular z-score automático por grupo ──
     raw_cols = [
-        'cmj_altura_raw', 'cmj_vuelo_raw', 'cmj_potencia_raw',
-        'cmj_aterrizaje_raw', 'cmj_rsi_raw',
+        'cmj_altura_raw', 'cmj_vuelo_raw', 'cmj_rsi_raw', 
+        'cmj_takeoff_velocity_raw', 'cmj_potencia_raw', 'cmj_aterrizaje_raw',
         'sj_altura_raw', 'sj_vuelo_raw', 'sj_potencia_raw', 'sj_aterrizaje_raw',
         'dj_altura_raw', 'dj_vuelo_raw', 'dj_potencia_raw',
         'dj_aterrizaje_raw', 'dj_rsi_raw',
@@ -492,9 +493,10 @@ JUMP_CFG = {
             # (etiqueta, col_raw, col_z, color, unidad)
             ('Altura de salto',      'cmj_altura_raw',     'cmj_altura_z',     TEAL, 'cm'),
             ('Tiempo de vuelo',      'cmj_vuelo_raw',      'cmj_vuelo_z',      COOL, 'ms'),
+            ('RSI',                  'cmj_rsi_raw',        'cmj_rsi_z',        '#8B5CF6', ''),
+            ('Velocidad Vertical',   'cmj_takeoff_velocity_raw', 'cmj_vertical_z', '#F97316', 'm/s'),
             ('Fuerza de impulso',    'cmj_potencia_raw',   'cmj_potencia_z',   GOLD, 'W'),
             ('Fuerza de aterrizaje', 'cmj_aterrizaje_raw', 'cmj_aterrizaje_z', HOT,  'N'),
-            ('RSI',                  'cmj_rsi_raw',        'cmj_rsi_z',        '#8B5CF6', ''),
         ]
     },
     'sj': {
