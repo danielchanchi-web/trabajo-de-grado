@@ -174,13 +174,13 @@ def load_data(path):
     raw_cols = [
         'cmj_altura_raw', 'cmj_vuelo_raw', 'cmj_rsi_raw', 
         'cmj_takeoff_velocity_raw', 'cmj_potencia_raw', 'cmj_peak_power_raw',
-        'cmj_aterrizaje_raw', 'cmj_concentric_force', 'cmj_concentric_impulse',
+        'cmj_aterrizaje_raw', 'cmj_concentric_force_raw', 'cmj_concentric_impulse_raw',
         'sj_altura_raw', 'sj_vuelo_raw', 'sj_takeoff_velocity_raw', 
         'sj_potencia_raw', 'sj_peak_power_raw', 'sj_aterrizaje_raw',
-        'sj_concentric_force', 'sj_concentric_impulse',
+        'sj_concentric_force_raw', 'sj_concentric_impulse_raw',
         'dj_altura_raw', 'dj_vuelo_raw', 'dj_rsi_raw', 'dj_takeoff_velocity_raw',
         'dj_potencia_raw', 'dj_peak_power_raw', 'dj_aterrizaje_raw', 
-        'dj_concentric_force', 'dj_concentric_impulse',
+        'dj_concentric_force_raw', 'dj_concentric_impulse_raw',
     ]
     for col in raw_cols:
         z_col = col.replace('_raw', '_z')
