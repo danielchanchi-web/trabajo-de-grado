@@ -149,6 +149,7 @@ def load_data(path):
     # SJ
     ds['sj_altura_raw']     = prom_intentos(ds, 'jump_height_sj_')
     ds['sj_vuelo_raw']      = prom_intentos(ds, 'flight_time_sj_')
+    ds['sj_takeoff_velocity_raw'] = prom_intentos(ds, 'takeoff_velocity_sj_')
     ds['sj_potencia_raw']   = prom_intentos(ds, 'avg_propulsive_power_sj_')
     ds['sj_aterrizaje_raw'] = prom_intentos(ds, 'peak_landing_force_sj_')
 
@@ -156,6 +157,7 @@ def load_data(path):
     ds['dj_altura_raw']     = prom_intentos(ds, 'jump_height_dj_')
     ds['dj_vuelo_raw']      = prom_intentos(ds, 'flight_time_dj_')
     ds['dj_rsi_raw']        = prom_intentos(ds, 'RSI__dj_')
+    ds['dj_takeoff_velocity_raw'] = prom_intentos(ds, 'takeoff_velocity_dj_')
     ds['dj_potencia_raw']   = prom_intentos(ds, 'avg_propulsive_power_dj_')
     ds['dj_aterrizaje_raw'] = prom_intentos(ds, 'peak_braking_force_dj_')
 
@@ -163,9 +165,10 @@ def load_data(path):
     raw_cols = [
         'cmj_altura_raw', 'cmj_vuelo_raw', 'cmj_rsi_raw', 
         'cmj_takeoff_velocity_raw', 'cmj_potencia_raw', 'cmj_aterrizaje_raw',
-        'sj_altura_raw', 'sj_vuelo_raw', 'sj_potencia_raw', 'sj_aterrizaje_raw',
-        'dj_altura_raw', 'dj_vuelo_raw', 'dj_potencia_raw',
-        'dj_aterrizaje_raw', 'dj_rsi_raw',
+        'sj_altura_raw', 'sj_vuelo_raw', 'sj_takeoff_velocity_raw', 
+        'sj_potencia_raw', 'sj_aterrizaje_raw',
+        'dj_altura_raw', 'dj_vuelo_raw', 'dj_takeoff_velocity_raw',
+        'dj_potencia_raw', 'dj_aterrizaje_raw', 'dj_rsi_raw',
     ]
     for col in raw_cols:
         z_col = col.replace('_raw', '_z')
@@ -494,7 +497,7 @@ JUMP_CFG = {
             ('Altura de salto',      'cmj_altura_raw',     'cmj_altura_z',     TEAL, 'cm'),
             ('Tiempo de vuelo',      'cmj_vuelo_raw',      'cmj_vuelo_z',      COOL, 'ms'),
             ('RSI',                  'cmj_rsi_raw',        'cmj_rsi_z',        '#8B5CF6', ''),
-            ('Velocidad Vertical',   'cmj_takeoff_velocity_raw', 'cmj_vertical_z', '#F97316', 'm/s'),
+            ('Velocidad vertical',   'cmj_takeoff_velocity_raw', 'cmj_vertical_z', '#F97316', 'm/s'),
             ('Fuerza de impulso',    'cmj_potencia_raw',   'cmj_potencia_z',   GOLD, 'W'),
             ('Fuerza de aterrizaje', 'cmj_aterrizaje_raw', 'cmj_aterrizaje_z', HOT,  'N'),
         ]
@@ -505,6 +508,7 @@ JUMP_CFG = {
         'metrics': [
             ('Altura de salto',      'sj_altura_raw',     'sj_altura_z',     TEAL, 'cm'),
             ('Tiempo de vuelo',      'sj_vuelo_raw',      'sj_vuelo_z',      COOL, 'ms'),
+            ('Velocidad vertical',   'sj_takeoff_velocity_raw', 'sj_vertical_z', '#F97316', 'm/s'),
             ('Fuerza de impulso',    'sj_potencia_raw',   'sj_potencia_z',   GOLD, 'W'),
             ('Fuerza de aterrizaje', 'sj_aterrizaje_raw', 'sj_aterrizaje_z', HOT,  'N'),
         ]
@@ -515,6 +519,7 @@ JUMP_CFG = {
         'metrics': [
             ('Altura de salto',      'dj_altura_raw',     'dj_altura_z',     TEAL, 'cm'),
             ('Tiempo de vuelo',      'dj_vuelo_raw',      'dj_vuelo_z',      COOL, 'ms'),
+            ('Velocidad vertical',   'dj_takeoff_velocity_raw', 'dj_vertical_z', '#F97316', 'm/s'),
             ('Fuerza de impulso',    'dj_potencia_raw',   'dj_potencia_z',   GOLD, 'W'),
             ('Fuerza de aterrizaje', 'dj_aterrizaje_raw', 'dj_aterrizaje_z', HOT,  'N'),
             ('RSI',                  'dj_rsi_raw',        'dj_rsi_z',        '#8B5CF6', ''),
