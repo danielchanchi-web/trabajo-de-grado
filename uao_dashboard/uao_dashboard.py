@@ -25,19 +25,11 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # CARGA DE DATOS
 # ══════════════════════════════════════════
 def load_data(path):
-    # ── Nombres desde "Datos generales" ──
-    dg = pd.read_excel(path, sheet_name='Datos generales', header=None)
-    dg = dg.iloc[1:, [1]].copy()
-    dg.columns = ['Nombre']
-    dg = dg.dropna()
-    dg['Nombre'] = dg['Nombre'].astype(str).str.strip()
-
-    
     # ── Función z-score ──
     def zscore_col(s):
-        s     = pd.to_numeric(s, errors='coerce')
+        s = pd.to_numeric(s, errors='coerce')
         media = s.mean()
-        std   = s.std()
+        std = s.std()
         if std == 0 or pd.isna(std):
             return pd.Series([0.0] * len(s), index=s.index)
         return ((s - media) / std).round(3)
@@ -46,49 +38,122 @@ def load_data(path):
     dv = pd.read_excel(path, sheet_name='Velocidad', header=0)
     dv.columns = [str(c).strip() for c in dv.columns]
     dv = dv[dv['Nombre'].astype(str).str.startswith('UAO_')].copy()
-    dv['Nombre'] = dv['Nombre'].astype(str).str.strip()
-    # z-score por distancia * -1 (menos tiempo = mejor), luego TSA
+    dv['Nombre'] = dv['Nombre'].astype(str).str.strip().str.upper()
+    
     dv['Z_10m_py'] = zscore_col(dv['sprint_10m_p1']) * -1
     dv['Z_20m_py'] = zscore_col(dv['sprint_20m_p1']) * -1
     dv['Z_30m_py'] = zscore_col(dv['sprint_30m_p1']) * -1
-    dv['Vel_Z']    = dv[['Z_10m_py', 'Z_20m_py', 'Z_30m_py']].mean(axis=1).round(3)
+    dv['Vel_Z'] = dv[['Z_10m_py', 'Z_20m_py', 'Z_30m_py']].mean(axis=1).round(3)
     dv = dv[['Nombre', 'sprint_10m_p1', 'sprint_20m_p1', 'sprint_30m_p1', 'Vel_Z']]
 
     # ── 5-10-5 (hoja "5-10-5") ──
     d5 = pd.read_excel(path, sheet_name='5-10-5', header=0)
     d5 = d5[d5['Nombre'].astype(str).str.startswith('UAO_')].copy()
-    d5['Nombre'] = d5['Nombre'].astype(str).str.strip()
-    # Columnas por posición: col 1=tiempo intento 1, col 5=intento 2, col 9=intento 3
+    d5['Nombre'] = d5['Nombre'].astype(str).str.strip().str.upper()
+    
     cols_d5 = d5.columns.tolist()
-    t1_col  = cols_d5[2]   # Tiempo promedio intento 1
-    t2_col  = cols_d5[6]   # Tiempo promedio intento 2
-    t3_col  = cols_d5[10]   # Tiempo promedio intento 3
+    t1_col = cols_d5[2]
+    t2_col = cols_d5[6]
+    t3_col = cols_d5[10]
     d5['Z_510_1'] = zscore_col(d5[t1_col]) * -1
     d5['Z_510_2'] = zscore_col(d5[t2_col]) * -1
     d5['Z_510_3'] = zscore_col(d5[t3_col]) * -1
-    d5['Ag_Z']    = d5[['Z_510_1', 'Z_510_2', 'Z_510_3']].mean(axis=1).round(3)
+    d5['Ag_Z'] = d5[['Z_510_1', 'Z_510_2', 'Z_510_3']].mean(axis=1).round(3)
     d5 = d5[['Nombre', t1_col, t2_col, t3_col, 'Ag_Z']]
     d5.columns = ['Nombre', 't510_1', 't510_2', 't510_3', 'Ag_Z']
 
     # ── Stardrill (hoja "Stardrill") ──
     dsd = pd.read_excel(path, sheet_name='Stardrill', header=0)
     dsd = dsd[dsd['Nombre'].astype(str).str.startswith('UAO_')].copy()
-    dsd['Nombre'] = dsd['Nombre'].astype(str).str.strip()
+    dsd['Nombre'] = dsd['Nombre'].astype(str).str.strip().str.upper()
+    
     cols_dsd = dsd.columns.tolist()
-    s1_col   = cols_dsd[2]    # Tiempo promedio intento 1
-    s2_col   = cols_dsd[15]   # Tiempo promedio intento 2
-    dsd['Z_sd_1']  = zscore_col(dsd[s1_col]) * -1
-    dsd['Z_sd_2']  = zscore_col(dsd[s2_col]) * -1
-    dsd['Star_Z']  = dsd[['Z_sd_1', 'Z_sd_2']].mean(axis=1).round(3)
+    s1_col = cols_dsd[2]
+    s2_col = cols_dsd[15]
+    dsd['Z_sd_1'] = zscore_col(dsd[s1_col]) * -1
+    dsd['Z_sd_2'] = zscore_col(dsd[s2_col]) * -1
+    dsd['Star_Z'] = dsd[['Z_sd_1', 'Z_sd_2']].mean(axis=1).round(3)
     dsd = dsd[['Nombre', s1_col, s2_col, 'Star_Z']]
     dsd.columns = ['Nombre', 'sd_t1', 'sd_t2', 'Star_Z']
 
-    # ── Merge todo con datos generales ──
-    df = dg.copy()
-    df = df[df['Nombre'].str.startswith('UAO_')].reset_index(drop=True)
-    df = df.merge(dv,  on='Nombre', how='left')
-    df = df.merge(d5,  on='Nombre', how='left')
+    # ── Saltos desde "Saltos" ──
+    ds = pd.read_excel(path, sheet_name='Saltos', header=0)
+    ds = ds[ds['Nombre'].astype(str).str.startswith('UAO_')].copy()
+    ds['Nombre'] = ds['Nombre'].astype(str).str.strip().str.upper()
+    ds = ds.reset_index(drop=True)
+
+    # ── Función: promedia los intentos ──
+    def prom_intentos(ds_local, patron):
+        cols = [c for c in ds_local.columns
+                if patron.lower() in str(c).lower() and str(c)[-1].isdigit()]
+        if not cols:
+            return pd.Series([np.nan] * len(ds_local), index=ds_local.index)
+        return ds_local[cols].apply(pd.to_numeric, errors='coerce').mean(axis=1)
+
+    # ── Función: calcula z-score del grupo ──
+    def zscore_grupo(serie):
+        media = serie.mean()
+        std = serie.std()
+        if std == 0 or pd.isna(std):
+            return pd.Series([0.0] * len(serie), index=serie.index)
+        return ((serie - media) / std).round(3)
+
+    # ── Promediar intentos crudos (CMJ) ──
+    ds['cmj_altura_raw'] = prom_intentos(ds, 'jump_height_cmj_')
+    ds['cmj_vuelo_raw'] = prom_intentos(ds, 'flight_time_cmj_')
+    ds['cmj_rsi_raw'] = prom_intentos(ds, 'RSI_cmj_')
+    ds['cmj_takeoff_velocity_raw'] = prom_intentos(ds, 'takeoff_velocity_cmj_')
+    ds['cmj_potencia_raw'] = prom_intentos(ds, 'avg_propulsive_power_cmj_')
+    ds['cmj_peak_power_raw'] = prom_intentos(ds, 'peak_propulsive_power_cmj_')
+    ds['cmj_aterrizaje_raw'] = prom_intentos(ds, 'peak_landing_force_cmj_')
+    ds['cmj_concentric_force_raw'] = prom_intentos(ds, 'avg_propulsive_force_cmj_')
+    ds['cmj_concentric_impulse_raw'] = prom_intentos(ds, 'propulsive_impulse_cmj_')
+
+    # ── SJ ──
+    ds['sj_altura_raw'] = prom_intentos(ds, 'jump_height_sj_')
+    ds['sj_vuelo_raw'] = prom_intentos(ds, 'flight_time_sj_')
+    ds['sj_takeoff_velocity_raw'] = prom_intentos(ds, 'takeoff_velocity_sj_')
+    ds['sj_potencia_raw'] = prom_intentos(ds, 'avg_propulsive_power_sj_')
+    ds['sj_peak_power_raw'] = prom_intentos(ds, 'peak_propulsive_power_sj_')
+    ds['sj_aterrizaje_raw'] = prom_intentos(ds, 'peak_landing_force_sj_')
+    ds['sj_concentric_force_raw'] = prom_intentos(ds, 'avg_propulsive_force_sj_')
+    ds['sj_concentric_impulse_raw'] = prom_intentos(ds, 'propulsive_impulse_sj_')
+
+    # ── DJ ──
+    ds['dj_altura_raw'] = prom_intentos(ds, 'jump_height_dj_')
+    ds['dj_vuelo_raw'] = prom_intentos(ds, 'flight_time_dj_')
+    ds['dj_rsi_raw'] = prom_intentos(ds, 'RSI__dj_')
+    ds['dj_takeoff_velocity_raw'] = prom_intentos(ds, 'takeoff_velocity_dj_')
+    ds['dj_potencia_raw'] = prom_intentos(ds, 'avg_propulsive_power_dj_')
+    ds['dj_peak_power_raw'] = prom_intentos(ds, 'peak_propulsive_power_dj_')
+    ds['dj_aterrizaje_raw'] = prom_intentos(ds, 'peak_braking_force_dj_')
+    ds['dj_concentric_force_raw'] = prom_intentos(ds, 'avg_propulsive_force_dj_')
+    ds['dj_concentric_impulse_raw'] = prom_intentos(ds, 'propulsive_impulse_dj_')
+
+    # ── Calcular z-scores ──
+    raw_cols = [
+        'cmj_altura_raw', 'cmj_vuelo_raw', 'cmj_rsi_raw',
+        'cmj_takeoff_velocity_raw', 'cmj_potencia_raw', 'cmj_peak_power_raw',
+        'cmj_aterrizaje_raw', 'cmj_concentric_force_raw', 'cmj_concentric_impulse_raw',
+        'sj_altura_raw', 'sj_vuelo_raw', 'sj_takeoff_velocity_raw',
+        'sj_potencia_raw', 'sj_peak_power_raw', 'sj_aterrizaje_raw',
+        'sj_concentric_force_raw', 'sj_concentric_impulse_raw',
+        'dj_altura_raw', 'dj_vuelo_raw', 'dj_rsi_raw', 'dj_takeoff_velocity_raw',
+        'dj_potencia_raw', 'dj_peak_power_raw', 'dj_aterrizaje_raw',
+        'dj_concentric_force_raw', 'dj_concentric_impulse_raw',
+    ]
+    for col in raw_cols:
+        z_col = col.replace('_raw', '_z')
+        z = zscore_grupo(pd.to_numeric(ds[col], errors='coerce'))
+        ds[z_col] = (-z).round(3)
+
+    # ── UNIR TODO usando los nombres de la hoja "Saltos" como base ──
+    # Usamos ds como base en lugar de dg
+    df = ds[['Nombre']].copy()
+    df = df.merge(dv, on='Nombre', how='left')
+    df = df.merge(d5, on='Nombre', how='left')
     df = df.merge(dsd, on='Nombre', how='left')
+    df = df.merge(ds, on='Nombre', how='left')
 
     # ── Overall Z y nivel ──
     df['Overall_Z'] = df[['Vel_Z', 'Ag_Z', 'Star_Z']].mean(axis=1).round(3)
@@ -99,124 +164,21 @@ def load_data(path):
             return pd.Series([50.0] * len(s), index=s.index)
         return ((s - mn) / (mx - mn) * 100).round(1)
 
-    df['Vel_N']   = to_100(df['Vel_Z'])
-    df['Ag_N']    = to_100(df['Ag_Z'])
-    df['Star_N']  = to_100(df['Star_Z'])
+    df['Vel_N'] = to_100(df['Vel_Z'])
+    df['Ag_N'] = to_100(df['Ag_Z'])
+    df['Star_N'] = to_100(df['Star_Z'])
     df['Overall'] = df[['Vel_N', 'Ag_N', 'Star_N']].mean(axis=1).round(1)
 
     def nivel(s):
-        if s >= 66: return 'Alto'
-        if s >= 33: return 'Medio'
+        if s >= 66:
+            return 'Alto'
+        if s >= 33:
+            return 'Medio'
         return 'Bajo'
     df['Nivel'] = df['Overall'].apply(nivel)
 
-    # Lee desde fila 0 para tomar los nombres reales de columna
-    # ── Saltos desde "Saltos" ──
-    # header=0 usa fila 0 como nombres de columna (tiene TODAS las métricas _1 _2 _3)
-    # Los datos de jugadores están en filas 1-27, se filtran por UAO_
-    ds = pd.read_excel(path, sheet_name='Saltos', header=0)
-    ds = ds[ds['Nombre'].astype(str).str.startswith('UAO_')].copy()
-    ds['Nombre'] = ds['Nombre'].astype(str).str.strip()
-    ds = ds.reset_index(drop=True)
-
-         # ── INSpeccionar TODOS los nombres de columnas ──
-    print("\n=== TODAS LAS COLUMNAS EN SALTOS ===")
-    for i, col in enumerate(ds.columns):
-        print(f"{i+1}. '{col}'")
-    
-    # ── Buscar específicamente las columnas que necesitamos ──
-    print("\n=== BUSCANDO COLUMNAS ESPECÍFICAS ===")
-    patrones_buscar = [
-        'flight_time_cmj',
-        'RSI_cmj',
-        'avg_propulsive_power_cmj',
-        'peak_landing_force_cmj',
-        'takeoff_velocity_cmj',
-        'flight_time_sj',
-        'flight_time_dj',
-        'RSI_dj',
-    ]
-    for patron in patrones_buscar:
-        encontradas = [col for col in ds.columns if patron.lower() in col.lower()]
-        print(f"Patrón '{patron}': {encontradas if encontradas else 'NO ENCONTRADAS'}")
-
-  
-    # ── Función: promedia los intentos _1, _2, _3 de un patrón ──
-    def prom_intentos(ds_local, patron):
-        """Promedia columnas que coincidan con patron + número de intento (más flexible)."""
-        # Usamos 'in' en lugar de 'startswith' para ser más flexibles
-        cols = [c for c in ds_local.columns
-                if patron in str(c) and str(c)[-1].isdigit()]
-        if not cols:
-            return pd.Series([np.nan] * len(ds_local), index=ds_local.index)
-        return ds_local[cols].apply(pd.to_numeric, errors='coerce').mean(axis=1)
-
-    # ── Función: calcula z-score del grupo ──
-    def zscore_grupo(serie):
-        """z = (valor - media) / desviación estándar del grupo."""
-        media = serie.mean()
-        std   = serie.std()
-        if std == 0 or pd.isna(std):
-            return pd.Series([0.0] * len(serie), index=serie.index)
-        return ((serie - media) / std).round(3)
-
-    # ── Promediar intentos crudos (_1, _2, _3) ──
-    # CMJ
-    ds['cmj_altura_raw']     = prom_intentos(ds, 'jump_height_cmj_')
-    ds['cmj_vuelo_raw']      = prom_intentos(ds, 'flight_time_cmj_')
-    ds['cmj_rsi_raw']        = prom_intentos(ds, 'RSI_cmj_')
-    ds['cmj_takeoff_velocity_raw'] = prom_intentos(ds, 'takeoff_velocity_cmj_')
-    ds['cmj_potencia_raw']   = prom_intentos(ds, 'avg_propulsive_power_cmj_')
-    ds['cmj_peak_power_raw'] = prom_intentos(ds, 'peak_propulsive_power_cmj_')
-    ds['cmj_aterrizaje_raw'] = prom_intentos(ds, 'peak_landing_force_cmj_')
-    ds['cmj_concentric_force_raw'] = prom_intentos(ds, 'avg_propulsive_force_cmj_')
-    ds['cmj_concentric_impulse_raw'] = prom_intentos(ds, 'propulsive_impulse_cmj_')
-
-    # SJ
-    ds['sj_altura_raw']     = prom_intentos(ds, 'jump_height_sj_')
-    ds['sj_vuelo_raw']      = prom_intentos(ds, 'flight_time_sj_')
-    ds['sj_takeoff_velocity_raw'] = prom_intentos(ds, 'takeoff_velocity_sj_')
-    ds['sj_potencia_raw']   = prom_intentos(ds, 'avg_propulsive_power_sj_')
-    ds['sj_peak_power_raw'] = prom_intentos(ds, 'peak_propulsive_power_sj_')
-    ds['sj_aterrizaje_raw'] = prom_intentos(ds, 'peak_landing_force_sj_')
-    ds['sj_concentric_force_raw'] = prom_intentos(ds, 'avg_propulsive_force_sj_')
-    ds['sj_concentric_impulse_raw'] = prom_intentos(ds, 'propulsive_impulse_sj_')
-
-    # DJ
-    ds['dj_altura_raw']     = prom_intentos(ds, 'jump_height_dj_')
-    ds['dj_vuelo_raw']      = prom_intentos(ds, 'flight_time_dj_')
-    ds['dj_rsi_raw']        = prom_intentos(ds, 'RSI__dj_')
-    ds['dj_takeoff_velocity_raw'] = prom_intentos(ds, 'takeoff_velocity_dj_')
-    ds['dj_potencia_raw']   = prom_intentos(ds, 'avg_propulsive_power_dj_')
-    ds['dj_peak_power_raw'] = prom_intentos(ds, 'peak_propulsive_power_dj_')
-    ds['dj_aterrizaje_raw'] = prom_intentos(ds, 'peak_braking_force_dj_')
-    ds['dj_concentric_force_raw'] = prom_intentos(ds, 'avg_propulsive_force_dj_')
-    ds['dj_concentric_impulse_raw'] = prom_intentos(ds, 'propulsive_impulse_dj_')
-
-    # ── Calcular z-score automático por grupo ──
-    raw_cols = [
-        'cmj_altura_raw', 'cmj_vuelo_raw', 'cmj_rsi_raw', 
-        'cmj_takeoff_velocity_raw', 'cmj_potencia_raw', 'cmj_peak_power_raw',
-        'cmj_aterrizaje_raw', 'cmj_concentric_force_raw', 'cmj_concentric_impulse_raw',
-        'sj_altura_raw', 'sj_vuelo_raw', 'sj_takeoff_velocity_raw', 
-        'sj_potencia_raw', 'sj_peak_power_raw', 'sj_aterrizaje_raw',
-        'sj_concentric_force_raw', 'sj_concentric_impulse_raw',
-        'dj_altura_raw', 'dj_vuelo_raw', 'dj_rsi_raw', 'dj_takeoff_velocity_raw',
-        'dj_potencia_raw', 'dj_peak_power_raw', 'dj_aterrizaje_raw', 
-        'dj_concentric_force_raw', 'dj_concentric_impulse_raw',
-    ]
-    for col in raw_cols:
-        z_col = col.replace('_raw', '_z')
-        z = zscore_grupo(pd.to_numeric(ds[col], errors='coerce'))
-        ds[z_col] = (-z).round(3)
-
-    # ── Merge con df principal ──
-    keep = ['Nombre'] + raw_cols + [c.replace('_raw', '_z') for c in raw_cols]
-    ds   = ds[keep].copy()
-    ds['Nombre'] = ds['Nombre'].astype(str).str.strip()
-    df['Nombre'] = df['Nombre'].astype(str).str.strip()
-
-    df = df.merge(ds, on='Nombre', how='left')
+    # Eliminar duplicados por si acaso
+    df = df.drop_duplicates(subset=['Nombre'])
     df = df.sort_values('Overall', ascending=False).reset_index(drop=True)
     return df
 
