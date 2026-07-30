@@ -209,7 +209,7 @@ try:
     print(f"✅  {len(df)} deportistas cargados")
     
     # ══════════════════════════════════════════
-    # VERIFICACIÓN DE DATOS (TEMPORAL)
+    # VERIFICACIÓN DE DATOS (DENTRO DEL try)
     # ══════════════════════════════════════════
     print("\n=== VERIFICACIÓN DE DATOS CARGADOS ===")
     if 'cmj_altura_raw' in df.columns:
@@ -221,6 +221,7 @@ try:
             print("⚠️  UAO_001 no encontrado en los datos")
     else:
         print("⚠️  columna 'cmj_altura_raw' no encontrada")
+        print(f"Columnas disponibles: {df.columns.tolist()[:10]}...")
     
 except Exception as e:
     print(f"⚠️  Excel no encontrado: {e}\n   Usando datos de ejemplo.")
