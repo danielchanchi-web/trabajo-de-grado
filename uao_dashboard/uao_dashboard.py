@@ -188,37 +188,10 @@ def load_data(path):
     df = df.sort_values('Overall', ascending=False).reset_index(drop=True)
     return df
 
+# ══════════════════════════════════════════
+# CARGA INICIAL DE DATOS
+# ══════════════════════════════════════════
 DEFAULT_FILE = os.path.join(UPLOAD_FOLDER, "datos.xlsx")
-
-try:
-    if os.path.exists(DEFAULT_FILE):
-        df = load_data(DEFAULT_FILE)  # ← df SE DEFINE AQUÍ
-        print("Excel cargado.")
-    else:
-        raise FileNotFoundError
-
-    print(f"✅  {len(df)} deportistas cargados")
-    
-    # Verificar si la columna existe
-    if 'cmj_altura_raw' in df.columns:  # ← df EXISTE AQUÍ
-        # Buscar UAO_001
-        uao001 = df[df['Nombre'] == 'UAO_001']
-        if not uao001.empty:
-            altura = uao001['cmj_altura_raw'].values[0]
-            vuelo = uao001['cmj_vuelo_raw'].values[0]
-            print(f"✅ UAO_001 - Altura CMJ: {altura} cm")
-            print(f"✅ UAO_001 - Tiempo de vuelo: {vuelo} ms")
-        else:
-            print("⚠️  UAO_001 no encontrado en los datos")
-            print(f"   Primeros nombres: {df['Nombre'].head(5).tolist()}")
-    else:
-        print("⚠️  columna 'cmj_altura_raw' no encontrada")
-        print(f"   Columnas disponibles: {df.columns.tolist()[:15]}...")
-
-    for i, row in df.head(5).iterrows():
-        nombre = row['Nombre']
-        altura = row.get('cmj_altura_raw', 'N/A')
-        print(f"{nombre}: Altura = {altura}")
 
 try:
     if os.path.exists(DEFAULT_FILE):
@@ -260,6 +233,11 @@ except Exception as e:
     })
 
 ALL_IDS = df['Nombre'].tolist()
+
+# ══════════════════════════════════════════
+# PALETA
+# ══════════════════════════════════════════
+# ... resto del código ...
 
 # ══════════════════════════════════════════
 # PALETA
