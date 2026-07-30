@@ -1681,13 +1681,15 @@ def jump_section(c_cmj, c_sj, c_dj, player_sel, highlights, main_tab, cur_tab):
 @app.callback(
     Output('upload-status', 'children'),
     Output('upload-status', 'style'),
-    Output('data-store', 'data'),  # ← NUEVO: actualiza el Store
+    Output('data-store', 'data'),
     Input('upload-data', 'contents'),
     State('upload-data', 'filename'),
 )
 def upload_data(contents, filename):
+    global df, ALL_IDS  # ← global AL PRINCIPIO
+    
     if contents is None:
-        return '', {'display': 'none'}, df.to_json(orient='records')
+        return '', {'display': 'none'}, df.to_json(orient='records') if not df.empty else '{}'
     
     try:
         # Decodificar el archivo
@@ -1702,7 +1704,6 @@ def upload_data(contents, filename):
             tmp_path = tmp_file.name
         
         # Cargar los datos
-        global df, ALL_IDS
         df = load_data(tmp_path)
         ALL_IDS = df['Nombre'].tolist()
         
@@ -1714,7 +1715,7 @@ def upload_data(contents, filename):
             'color': TEAL,
             'marginLeft': '12px',
             'display': 'inline-block'
-        }, df.to_json(orient='records')  # ← Guarda los datos en el Store
+        }, df.to_json(orient='records')
         
     except Exception as e:
         return f'❌ Error: {str(e)}', {
@@ -1722,7 +1723,7 @@ def upload_data(contents, filename):
             'color': HOT,
             'marginLeft': '12px',
             'display': 'inline-block'
-        }, df.to_json(orient='records')  # ← Mantiene los datos actuales
+        }, df.to_json(orient='records') if not df.empty else '{}'
 
 @app.callback(
     Output('rend-player-select', 'options'),
