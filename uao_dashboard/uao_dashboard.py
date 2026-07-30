@@ -201,7 +201,7 @@ DEFAULT_FILE = os.path.join(UPLOAD_FOLDER, "datos.xlsx")
 
 try:
     if os.path.exists(DEFAULT_FILE):
-        df = load_data(DEFAULT_FILE)
+        df = load_data(DEFAULT_FILE)  # ← df SE DEFINE AQUÍ
         print("Excel cargado.")
     else:
         raise FileNotFoundError
@@ -212,19 +212,26 @@ try:
     # VERIFICACIÓN DE DATOS (DENTRO DEL try)
     # ══════════════════════════════════════════
     print("\n=== VERIFICACIÓN DE DATOS CARGADOS ===")
-    if 'cmj_altura_raw' in df.columns:
+    
+    # Verificar si la columna existe
+    if 'cmj_altura_raw' in df.columns:  # ← df EXISTE AQUÍ
+        # Buscar UAO_001
         uao001 = df[df['Nombre'] == 'UAO_001']
         if not uao001.empty:
-            print(f"UAO_001 - Altura CMJ: {uao001['cmj_altura_raw'].values[0]} cm")
-            print(f"UAO_001 - Tiempo de vuelo: {uao001['cmj_vuelo_raw'].values[0]} ms")
+            altura = uao001['cmj_altura_raw'].values[0]
+            vuelo = uao001['cmj_vuelo_raw'].values[0]
+            print(f"✅ UAO_001 - Altura CMJ: {altura} cm")
+            print(f"✅ UAO_001 - Tiempo de vuelo: {vuelo} ms")
         else:
             print("⚠️  UAO_001 no encontrado en los datos")
+            print(f"   Primeros nombres: {df['Nombre'].head(5).tolist()}")
     else:
         print("⚠️  columna 'cmj_altura_raw' no encontrada")
-        print(f"Columnas disponibles: {df.columns.tolist()[:10]}...")
-    
+        print(f"   Columnas disponibles: {df.columns.tolist()[:15]}...")
+
 except Exception as e:
-    print(f"⚠️  Excel no encontrado: {e}\n   Usando datos de ejemplo.")
+    print(f"⚠️  Error cargando Excel: {e}")
+    # ... datos de ejemplo ...
     np.random.seed(42)
     ids = [f'UAO_{i:03d}' for i in range(1, 28)]
     df = pd.DataFrame({
