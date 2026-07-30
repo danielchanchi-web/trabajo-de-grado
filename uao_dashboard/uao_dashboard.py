@@ -224,28 +224,27 @@ try:
     
 except Exception as e:
     print(f"⚠️  Excel no encontrado: {e}\n   Usando datos de ejemplo.")
-    # ... datos de ejemplo ...
     np.random.seed(42)
     ids = [f'UAO_{i:03d}' for i in range(1, 28)]
-    df  = pd.DataFrame({
-        'Nombre':    ids,
+    df = pd.DataFrame({
+        'Nombre': ids,
         'Velocidad': np.random.randn(27),
-        '5_10_5':    np.random.randn(27),
+        '5_10_5': np.random.randn(27),
         'StarDrill': np.random.randn(27),
     })
     def to100(s):
         mn, mx = s.min(), s.max()
         return ((s - mn) / (mx - mn) * 100).round(1)
-    df['Vel_N']   = to100(df['Velocidad'])
-    df['Ag_N']    = to100(df['5_10_5'])
-    df['Star_N']  = to100(df['StarDrill'])
+    df['Vel_N'] = to100(df['Velocidad'])
+    df['Ag_N'] = to100(df['5_10_5'])
+    df['Star_N'] = to100(df['StarDrill'])
     df['Overall'] = df[['Vel_N', 'Ag_N', 'Star_N']].mean(axis=1).round(1)
     df['Overall_Z'] = df[['Velocidad', '5_10_5', 'StarDrill']].mean(axis=1).round(3)
-    df['Nivel']   = df['Overall'].apply(
+    df['Nivel'] = df['Overall'].apply(
         lambda s: 'Alto' if s >= 66 else ('Medio' if s >= 33 else 'Bajo'))
     for k in ['cmj_rfd_exc', 'cmj_altura', 'cmj_potencia', 'cmj_aterrizaje',
-              'sj_rfd_conc', 'sj_altura',  'sj_potencia',  'sj_aterrizaje',
-              'dj_altura',   'dj_rsi',     'dj_impacto',   'dj_aterrizaje', 'dj_tiempo']:
+              'sj_rfd_conc', 'sj_altura', 'sj_potencia', 'sj_aterrizaje',
+              'dj_altura', 'dj_rsi', 'dj_impacto', 'dj_aterrizaje', 'dj_tiempo']:
         df[k] = np.random.uniform(0.2, 0.8, 27).round(3)
     df = df.sort_values('Overall', ascending=False).reset_index(drop=True)
 
