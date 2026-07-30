@@ -320,7 +320,7 @@ def build_highlight_traces(sub_full, highlights):
 
     if 'best' in highlights:
         best_row = sub_full.loc[sub_full['Overall_Z'].idxmax()].copy()
-        best_row['Nombre'] = f'★ Mejor ({best_row["Nombre"]})'
+        best_row['Nombre'] = f'★ Alto rendimiento ({best_row["Nombre"]})'
         traces.append(('best', best_row))
 
     if 'avg' in highlights:
@@ -334,7 +334,7 @@ def build_highlight_traces(sub_full, highlights):
 
     if 'worst' in highlights:
         worst_row = sub_full.loc[sub_full['Overall_Z'].idxmin()].copy()
-        worst_row['Nombre'] = f'▼ Peor ({worst_row["Nombre"]})'
+        worst_row['Nombre'] = f'▼ Bajo rendimiento ({worst_row["Nombre"]})'
         traces.append(('worst', worst_row))
 
     return traces
