@@ -199,11 +199,6 @@ try:
 
     print(f"✅  {len(df)} deportistas cargados")
     
-    # ══════════════════════════════════════════
-    # VERIFICACIÓN DE DATOS (DENTRO DEL try)
-    # ══════════════════════════════════════════
-    print("\n=== VERIFICACIÓN DE DATOS CARGADOS ===")
-    
     # Verificar si la columna existe
     if 'cmj_altura_raw' in df.columns:  # ← df EXISTE AQUÍ
         # Buscar UAO_001
@@ -220,8 +215,6 @@ try:
         print("⚠️  columna 'cmj_altura_raw' no encontrada")
         print(f"   Columnas disponibles: {df.columns.tolist()[:15]}...")
 
-    # ── Verificación adicional: Mostrar todos los jugadores ──
-    print("\n=== PRIMEROS 5 JUGADORES ===")
     for i, row in df.head(5).iterrows():
         nombre = row['Nombre']
         altura = row.get('cmj_altura_raw', 'N/A')
@@ -1723,19 +1716,12 @@ def upload_data(contents, filename):
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
             tmp_file.write(decoded)
             tmp_path = tmp_file.name
-          
-         # ── VERIFICACIÓN ANTES DE CARGAR ──
-        print(f"\n📂 Cargando archivo: {filename}")
-
-      
+                
         # Cargar los datos usando tu función existente
         global df, ALL_IDS
         df = load_data(tmp_path)
         ALL_IDS = df['Nombre'].tolist()
-
-         # ── VERIFICACIÓN DESPUÉS DE CARGAR ──
-        print(f"✅ {len(df)} deportistas cargados")
-        print("\n=== PRIMEROS 5 JUGADORES ===")
+      
         for i, row in df.head(5).iterrows():
             nombre = row['Nombre']
             altura = row.get('cmj_altura_raw', 'N/A')
