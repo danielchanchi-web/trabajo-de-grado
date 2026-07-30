@@ -119,11 +119,33 @@ def load_data(path):
     ds['Nombre'] = ds['Nombre'].astype(str).str.strip()
     ds = ds.reset_index(drop=True)
 
+        # ── VERIFICACIÓN TEMPORAL (se verá en logs de Railway) ──
+    print("=== VERIFICACIÓN DE COLUMNAS DE SALTOS ===")
+    print(f"Columnas en 'Saltos': {len(ds.columns)}")
+    
+    # Mostrar las primeras 10 columnas para inspeccionar
+    print("Primeras 10 columnas:")
+    for i, col in enumerate(ds.columns[:10]):
+        print(f"  {i+1}. '{col}'")
+    
+    # Verificar columnas _raw
+    raw_cols_test = ['cmj_altura_raw', 'cmj_vuelo_raw', 'cmj_rsi_raw', 
+                     'sj_altura_raw', 'dj_altura_raw', 'cmj_potencia_raw']
+    print("\nVerificando columnas _raw:")
+    for col in raw_cols_test:
+        if col in ds.columns:
+            # Mostrar un ejemplo de valor
+            sample = ds[col].dropna().iloc[0] if ds[col].notna().any() else 'sin datos'
+            print(f"  ✅ {col}: {ds[col].notna().sum()} valores, ej: {sample}")
+        else:
+            print(f"  ❌ {col}: NO ENCONTRADA")
+  
     # ── Función: promedia los intentos _1, _2, _3 de un patrón ──
     def prom_intentos(ds_local, patron):
-        """Promedia columnas que coincidan con patron + número de intento."""
+        """Promedia columnas que coincidan con patron + número de intento (más flexible)."""
+        # Usamos 'in' en lugar de 'startswith' para ser más flexibles
         cols = [c for c in ds_local.columns
-                if str(c).startswith(patron) and str(c)[-1].isdigit()]
+                if patron in str(c) and str(c)[-1].isdigit()]
         if not cols:
             return pd.Series([np.nan] * len(ds_local), index=ds_local.index)
         return ds_local[cols].apply(pd.to_numeric, errors='coerce').mean(axis=1)
