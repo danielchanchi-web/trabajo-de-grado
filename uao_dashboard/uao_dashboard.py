@@ -523,7 +523,7 @@ def detail_card(row):
 # ══════════════════════════════════════════
 # JUMP METRICS CONFIG  (métricas exactas solicitadas)
 # ══════════════════════════════════════════
- = {
+JUMP_CFG = {
     'cmj': {
         'title': 'CMJ — Countermovement Jump',
         'color': HOT,
