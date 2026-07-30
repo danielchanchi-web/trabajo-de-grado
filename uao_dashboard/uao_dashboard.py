@@ -571,51 +571,104 @@ def normalize_jump_metrics(jump_type, player_ids):
         sub[col + '_N'] = sub[col + '_N'].round(1)
     return sub
 
+def build_jump_highlight_traces(sub_full, highlights, jump_type):
+    """
+    Devuelve una lista de filas especiales (mejor, promedio, peor)
+    para agregar al radar de saltos.
+    sub_full: df completo del equipo (todos los jugadores).
+    jump_type: 'cmj', 'sj', 'dj'
+    highlights: lista de ['best', 'avg', 'worst']
+    """
+    cfg = JUMP_CFG[jump_type]
+    # Obtener todas las columnas Z para este tipo de salto
+    cols_z = [col_z for _, _, col_z, _, _ in cfg['metrics']]
+    # Filtrar columnas que existen en el DataFrame
+    cols_z = [col for col in cols_z if col in sub_full.columns]
+    
+    if not cols_z:
+        return []
+    
+    traces = []
+    
+    if 'best' in highlights:
+        # Calcular promedio de todas las Z para cada jugador
+        sub_full_copy = sub_full.copy()
+        sub_full_copy['avg_z'] = sub_full_copy[cols_z].mean(axis=1)
+        best_row = sub_full_copy.loc[sub_full_copy['avg_z'].idxmax()].copy()
+        best_row['Nombre'] = f'★ Mejor ({best_row["Nombre"]})'
+        traces.append(('best', best_row))
+    
+    if 'avg' in highlights:
+        avg_series = pd.Series({
+            'Nombre': 'Promedio grupo',
+        })
+        # Calcular promedio de cada columna Z
+        for col in cols_z:
+            avg_series[col] = sub_full[col].mean()
+        traces.append(('avg', avg_series))
+    
+    if 'worst' in highlights:
+        sub_full_copy = sub_full.copy()
+        sub_full_copy['avg_z'] = sub_full_copy[cols_z].mean(axis=1)
+        worst_row = sub_full_copy.loc[sub_full_copy['avg_z'].idxmin()].copy()
+        worst_row['Nombre'] = f'▼ Peor ({worst_row["Nombre"]})'
+        traces.append(('worst', worst_row))
+    
+    return traces
 
-def fig_jump_radar(jump_type, player_ids):
+def fig_jump_radar(jump_type, player_ids, highlight_traces=None):
+    """
+    Genera radar de salto con soporte para highlights (mejor, promedio, peor).
+    """
     cfg    = JUMP_CFG[jump_type]
     labels   = [lbl     for lbl, _, _, _, _    in cfg['metrics']]
     cols_raw = [col_raw for _, col_raw, _, _, _ in cfg['metrics']]
     cols_z   = [col_z   for _, _, col_z, _, _   in cfg['metrics']]
     units    = [u       for _, _, _, _, u        in cfg['metrics']]
-
-    sub = df[df['Nombre'].isin(player_ids)].copy()
-    if sub.empty:
+    
+    # Filtrar columnas Z que existen
+    cols_z_exist = [col for col in cols_z if col in df.columns]
+    if not cols_z_exist:
         return None
-
-    # ── CMJ: z-score directo (ya vienen del Excel estandarizados) ──
+    
+    sub = df[df['Nombre'].isin(player_ids)].copy()
+    
+    # ── CMJ: z-score directo ──
     if jump_type == 'cmj':
         # Invertir fuerza de aterrizaje: menor fuerza = mejor rendimiento
-        INVERT_CMJ = {'cmj_aterrizaje'}
-
-        # Rango del eje: z típico -3 a +3, desplazado para que empiece en 0
+        INVERT_CMJ = {'cmj_aterrizaje_z'}
+        
         offset   = 3.5
         axis_max = 7.0
         tick_vals  = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5]
         tick_text  = ['z=-3', 'z=-2', 'z=-1', 'z=0', 'z=+1', 'z=+2', 'z=+3']
-
+        
         fig = go.Figure()
+        
+        # ── Trazas de jugadores seleccionados ──
         for i, (_, row) in enumerate(sub.iterrows()):
             color = RADAR_COLORS[i % len(RADAR_COLORS)]
             hex_  = color.lstrip('#')
             r, g, b = int(hex_[:2], 16), int(hex_[2:4], 16), int(hex_[4:], 16)
-
-            r_vals      = []
+            
+            r_vals = []
             hover_lines = []
-            for col_raw, col_z, lbl, unit in zip(cols_raw, cols_z, labels, units):
+            for lbl, col_z, col_raw, unit in zip(labels, cols_z, cols_raw, units):
                 z = pd.to_numeric(row.get(col_z, np.nan), errors='coerce')
                 if col_z in INVERT_CMJ:
-                    z = -z  # invertir: menos fuerza de aterrizaje = mejor
+                    z = -z
                 r_vals.append((z + offset) if pd.notna(z) else offset)
-
-                inv_note = ' ↓mejor' if col_z in INVERT_CMJ else ''
+                
                 if pd.notna(row.get(col_z, np.nan)):
-                    hover_lines.append(
-                        f"<b>{lbl}</b>{inv_note}: z={row.get(col_z, np.nan):+.3f}"
-                    )
+                    raw_val = row.get(col_raw, np.nan)
+                    inv_note = ' ↓mejor' if col_z in INVERT_CMJ else ''
+                    if pd.notna(raw_val):
+                        hover_lines.append(f"<b>{lbl}</b>{inv_note}: {raw_val:.2f} {unit} (z={row.get(col_z, np.nan):+.3f})")
+                    else:
+                        hover_lines.append(f"<b>{lbl}</b>{inv_note}: z={row.get(col_z, np.nan):+.3f}")
                 else:
                     hover_lines.append(f"<b>{lbl}</b>: sin datos")
-
+            
             fig.add_trace(go.Scatterpolar(
                 r=r_vals,
                 theta=labels,
@@ -626,7 +679,37 @@ def fig_jump_radar(jump_type, player_ids):
                 marker=dict(size=6 if len(sub) <= 4 else 4),
                 hovertemplate='<br>'.join(hover_lines) + '<extra>' + row['Nombre'] + '</extra>',
             ))
-
+        
+        # ── Trazas especiales (mejor, promedio, peor) ──
+        highlight_colors = {'best': TEAL, 'avg': COOL, 'worst': HOT}
+        highlight_dash   = {'best': 'solid', 'avg': 'dash', 'worst': 'dot'}
+        
+        for kind, row in (highlight_traces or []):
+            col  = highlight_colors[kind]
+            dash = highlight_dash[kind]
+            hex_ = col.lstrip('#')
+            r, g, b = int(hex_[:2], 16), int(hex_[2:4], 16), int(hex_[4:], 16)
+            
+            r_vals = []
+            hover_lines = []
+            for lbl, col_z in zip(labels, cols_z):
+                z = row.get(col_z, 0)
+                if col_z in INVERT_CMJ:
+                    z = -z
+                r_vals.append((z + offset) if pd.notna(z) else offset)
+                hover_lines.append(f"<b>{lbl}</b>: z={row.get(col_z, 0):+.3f}")
+            
+            fig.add_trace(go.Scatterpolar(
+                r=r_vals,
+                theta=labels,
+                fill='toself',
+                name=row['Nombre'],
+                line=dict(color=col, width=2.8, dash=dash),
+                fillcolor=f'rgba({r},{g},{b},0.08)',
+                marker=dict(size=6),
+                hovertemplate='<br>'.join(hover_lines) + '<extra>' + row['Nombre'] + '</extra>',
+            ))
+        
         fig.update_layout(
             **PLOT_BASE, height=440,
             polar=dict(
@@ -648,6 +731,88 @@ def fig_jump_radar(jump_type, player_ids):
             transition=dict(duration=400, easing='cubic-in-out'),
         )
         return fig
+    
+    # ── SJ / DJ: normalización min-max 0-100 ──
+    invert_minmax = {'sj_aterrizaje_z', 'dj_aterrizaje_z'}
+    offset   = 3.5
+    axis_max = 7.0
+    tick_vals = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5]
+    tick_text = ['z=-3', 'z=-2', 'z=-1', 'z=0', 'z=+1', 'z=+2', 'z=+3']
+    
+    fig = go.Figure()
+    
+    # ── Trazas de jugadores seleccionados ──
+    for i, (_, row) in enumerate(sub.iterrows()):
+        color = RADAR_COLORS[i % len(RADAR_COLORS)]
+        hex_  = color.lstrip('#')
+        r, g, b = int(hex_[:2], 16), int(hex_[2:4], 16), int(hex_[4:], 16)
+        
+        r_vals = []
+        hover_lines = []
+        for lbl, col_z, col_raw, unit in zip(labels, cols_z, cols_raw, units):
+            z   = pd.to_numeric(row.get(col_z, np.nan), errors='coerce')
+            raw = pd.to_numeric(row.get(col_raw, np.nan), errors='coerce')
+            r_vals.append((z + offset) if pd.notna(z) else offset)
+            if pd.notna(raw) and pd.notna(z):
+                hover_lines.append(f"<b>{lbl}</b>: {raw:.2f} {unit} (z={z:+.2f})")
+            elif pd.notna(z):
+                hover_lines.append(f"<b>{lbl}</b>: z={z:+.2f}")
+            else:
+                hover_lines.append(f"<b>{lbl}</b>: sin datos")
+        
+        fig.add_trace(go.Scatterpolar(
+            r=r_vals, theta=labels, fill='toself', name=row['Nombre'],
+            line=dict(color=color, width=2.5 if len(sub) == 1 else 1.8),
+            fillcolor=f'rgba({r},{g},{b},0.12)',
+            marker=dict(size=6 if len(sub) <= 4 else 4),
+            hovertemplate='<br>'.join(hover_lines) + '<extra>' + row['Nombre'] + '</extra>',
+        ))
+    
+    # ── Trazas especiales (mejor, promedio, peor) ──
+    highlight_colors = {'best': TEAL, 'avg': COOL, 'worst': HOT}
+    highlight_dash   = {'best': 'solid', 'avg': 'dash', 'worst': 'dot'}
+    
+    for kind, row in (highlight_traces or []):
+        col  = highlight_colors[kind]
+        dash = highlight_dash[kind]
+        hex_ = col.lstrip('#')
+        r, g, b = int(hex_[:2], 16), int(hex_[2:4], 16), int(hex_[4:], 16)
+        
+        r_vals = []
+        hover_lines = []
+        for lbl, col_z in zip(labels, cols_z):
+            z = row.get(col_z, 0)
+            r_vals.append((z + offset) if pd.notna(z) else offset)
+            hover_lines.append(f"<b>{lbl}</b>: z={row.get(col_z, 0):+.3f}")
+        
+        fig.add_trace(go.Scatterpolar(
+            r=r_vals, theta=labels, fill='toself', name=row['Nombre'],
+            line=dict(color=col, width=2.8, dash=dash),
+            fillcolor=f'rgba({r},{g},{b},0.08)',
+            marker=dict(size=6),
+            hovertemplate='<br>'.join(hover_lines) + '<extra>' + row['Nombre'] + '</extra>',
+        ))
+    
+    fig.update_layout(
+        **PLOT_BASE, height=440,
+        polar=dict(
+            bgcolor=SURF2,
+            radialaxis=dict(
+                visible=True, range=[0, axis_max],
+                tickvals=tick_vals,
+                ticktext=tick_text,
+                gridcolor=FAINT,
+                tickfont=dict(size=9, color=MUTED),
+                tickcolor='rgba(0,0,0,0)',
+            ),
+            angularaxis=dict(gridcolor=FAINT, tickfont=dict(size=11, color=TEXT), rotation=90),
+        ),
+        showlegend=True,
+        legend=dict(font=dict(size=11, color=MUTED), bgcolor='rgba(0,0,0,0)',
+                    orientation='h', y=-0.12, x=0.5, xanchor='center'),
+        transition=dict(duration=400, easing='cubic-in-out'),
+    )
+    return fig
 
     # ── SJ / DJ: normalización min-max 0-100 como antes ──
     invert_minmax = {'sj_aterrizaje', 'dj_aterrizaje', 'dj_tiempo', 'dj_impacto'}
@@ -1128,7 +1293,7 @@ html.Div([
         # ═══ SECCIÓN SALTOS ═══
         html.Div(id='sec-salt', style={'display': 'none'}, children=[
 
-            # ── Fila superior: sub-tabs + selector de jugador ──
+            # ── Fila superior: sub-tabs + selector de jugador + highlights ──
             html.Div([
                 # Sub-tabs CMJ / SJ / DJ
                 html.Div([
@@ -1155,7 +1320,7 @@ html.Div([
                                        'transition': 'all .25s'}),
                 ], style={'background': SURF2, 'borderRadius': '8px', 'padding': '4px',
                           'display': 'inline-flex', 'alignItems': 'center'}),
-
+            
                 # Selector de jugadores (multi-select dropdown)
                 html.Div([
                     html.Span('Jugadores',
@@ -1178,9 +1343,32 @@ html.Div([
                         className='jump-dropdown',
                     ),
                 ], style={'display': 'flex', 'alignItems': 'center', 'marginLeft': 'auto'}),
-
+            
             ], style={'display': 'flex', 'alignItems': 'center', 'justifyContent': 'space-between',
-                      'marginBottom': '18px', 'flexWrap': 'wrap', 'gap': '10px'}),
+                      'marginBottom': '12px', 'flexWrap': 'wrap', 'gap': '10px'}),
+            
+            # ── Fila de highlights (mejor, promedio, peor) ──
+            html.Div([
+                html.Span('Comparar con:',
+                          style={'fontSize': '11px', 'color': MUTED,
+                                 'textTransform': 'uppercase', 'letterSpacing': '.6px',
+                                 'fontWeight': '600', 'marginRight': '12px'}),
+                dcc.Checklist(
+                    id='jump-highlights',
+                    options=[
+                        {'label': ' Mejor rendimiento', 'value': 'best'},
+                        {'label': ' Rendimiento promedio', 'value': 'avg'},
+                        {'label': ' Bajo rendimiento', 'value': 'worst'},
+                    ],
+                    value=[],
+                    inline=True,
+                    style={'fontSize': '12px', 'color': MUTED,
+                           'fontFamily': 'Inter,sans-serif'},
+                    inputStyle={'marginRight': '4px', 'accentColor': TEAL},
+                    labelStyle={'marginRight': '16px', 'cursor': 'pointer'},
+                ),
+            ], style={'background': SURF2, 'borderRadius': '8px', 'padding': '10px 16px',
+                      'marginBottom': '14px', 'display': 'flex', 'alignItems': 'center'}),
 
             # ── Tarjetas de métricas ──
             html.Div(id='jump-cards', className='fade-in',
@@ -1364,28 +1552,21 @@ def main_tabs(r, s, cur):
     Input('jt-sj',               'n_clicks'),
     Input('jt-dj',               'n_clicks'),
     Input('jump-player-select',  'value'),
+    Input('jump-highlights',     'value'),
     Input('st-tab',              'data'),
 
     State('st-jtab', 'data'),
 )
-def jump_section(c_cmj, c_sj, c_dj, player_sel, main_tab, cur_tab):
+def jump_section(c_cmj, c_sj, c_dj, player_sel, highlights, main_tab, cur_tab):
 
     if main_tab != 'salt':
-        return (
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update
-        )
+        return (no_update, no_update, no_update, no_update, no_update, no_update, no_update)
+    
     ctx = callback_context
-    tid = ctx.triggered[0]['prop_id']
-
-    # tab ya fue determinado arriba
+    tid = ctx.triggered[0]['prop_id'] if ctx.triggered else ''
 
     sel = player_sel or []
+    highlights = highlights or []   # ← NUEVO
 
     # Determinar tab activo aunque no haya selección
     if 'jt-cmj' in tid:
@@ -1397,16 +1578,18 @@ def jump_section(c_cmj, c_sj, c_dj, player_sel, main_tab, cur_tab):
     else:
         tab = cur_tab
 
-    if not sel:
+    if not sel and not highlights:   # ← MODIFICADO (agregar 'and not highlights')
         empty_fig = go.Figure().update_layout(
             paper_bgcolor=SURF, plot_bgcolor=SURF,
             xaxis=dict(visible=False), yaxis=dict(visible=False),
             annotations=[dict(
-                text='Selecciona al menos un deportista',
+                text='Selecciona al menos un deportista o activa un highlight',
                 x=0.5, y=0.5, xref='paper', yref='paper',
                 showarrow=False, font=dict(size=13, color=MUTED),
             )]
         )
+
+      
         tab_colors = {'cmj': HOT, 'sj': COOL, 'dj': TEAL}
         def jbtn_empty(t):
             on = (t == tab)
@@ -1436,11 +1619,14 @@ def jump_section(c_cmj, c_sj, c_dj, player_sel, main_tab, cur_tab):
                 'color': '#fff' if on else MUTED,
                 'boxShadow': f'0 0 12px {tab_colors[t]}55' if on else 'none'}
 
-    # Tarjetas
+    # ── Tarjetas de métricas ──
     cards = jump_metric_cards(tab, sel)
 
-    # Radar chart
-    jradar = fig_jump_radar(tab, sel)
+    # ── Construir highlights ──           # ← NUEVO BLOQUE
+    highlight_traces = build_jump_highlight_traces(df, highlights, tab)
+  
+    # ── Radar chart con highlights ──
+    jradar = fig_jump_radar(tab, sel, highlight_traces)   # ← MODIFICADO
     radar_content = (
         dcc.Graph(figure=jradar, config={'displayModeBar': False})
         if jradar else
