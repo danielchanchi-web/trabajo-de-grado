@@ -181,21 +181,6 @@ def load_data(path):
     df = df.drop_duplicates(subset=['Nombre'])
     df = df.sort_values('Overall', ascending=False).reset_index(drop=True)
     return df
-# ══════════════════════════════════════════
-# VERIFICACIÓN DE DATOS (TEMPORAL)
-# ══════════════════════════════════════════
-print("\n=== VERIFICACIÓN DE DATOS CARGADOS ===")
-if 'cmj_altura_raw' in df.columns:
-    uao001 = df[df['Nombre'] == 'UAO_001']
-    if not uao001.empty:
-        print(f"UAO_001 - Altura CMJ: {uao001['cmj_altura_raw'].values[0]} cm")
-        print(f"UAO_001 - Tiempo de vuelo: {uao001['cmj_vuelo_raw'].values[0]} ms")
-    else:
-        print("⚠️  UAO_001 no encontrado en los datos")
-else:
-    print("⚠️  columna 'cmj_altura_raw' no encontrada")
-print(f"Total de jugadores cargados: {len(df)}")
-
 
 DEFAULT_FILE = os.path.join(UPLOAD_FOLDER, "datos.xlsx")
 
