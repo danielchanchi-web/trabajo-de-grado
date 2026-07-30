@@ -516,52 +516,50 @@ def detail_card(row):
 # ══════════════════════════════════════════
 JUMP_CFG = {
     'cmj': {
-        'title': 'CMJ — Countermovement Jump',
-        'color': HOT,
-        'metrics': [
-            # (etiqueta, col_raw, col_z, color, unidad)
-            ('Altura de salto',      'cmj_altura_raw',     'cmj_altura_z',     TEAL, 'cm'),
-            ('Tiempo de vuelo',      'cmj_vuelo_raw',      'cmj_vuelo_z',      COOL, 'ms'),
-            ('RSI',                  'cmj_rsi_raw',        'cmj_rsi_z',        '#8B5CF6', ''),
-            ('Velocidad vertical',   'cmj_takeoff_velocity_raw', 'cmj_takeoff_vertical_z', '#F97316', 'm/s'),
-            ('Potencia concéntrica',  'cmj_potencia_raw',   'cmj_potencia_z',   GOLD, 'W'),
-            ('Potencia máxima',      'cmj_peak_power_raw', 'cmj_peak_power_z', '#A3E635', ''),
-            ('Fuerza de aterrizaje', 'cmj_aterrizaje_raw', 'cmj_aterrizaje_z', HOT,  'N'),
-            ('Fuerza concéntrica', 'cmj_concentric_force_raw', 'cmj_concentric_force_z', '#EC4899', ''),
-            ('Impulso concéntrico', 'cmj_concentric_impulse_raw', 'cmj_concentric_impulse_z', '#67E8F9', ''),
+         'title': 'CMJ — Countermovement Jump',
+         'color': HOT,
+         'metrics': [
+             ('Altura de salto', 'cmj_altura_raw', 'cmj_altura_z', TEAL, 'cm'),
+             ('Tiempo de vuelo', 'cmj_vuelo_raw', 'cmj_vuelo_z', COOL, 'ms'),
+             ('RSI', 'cmj_rsi_raw', 'cmj_rsi_z', '#8B5CF6', ''),
+             ('Velocidad vertical', 'cmj_takeoff_velocity_raw', 'cmj_takeoff_velocity_z', '#F97316', 'm/s'),  # ← CORREGIDO
+             ('Potencia concéntrica', 'cmj_potencia_raw', 'cmj_potencia_z', GOLD, 'W'),
+             ('Potencia máxima', 'cmj_peak_power_raw', 'cmj_peak_power_z', '#A3E635', 'W'),
+             ('Fuerza de aterrizaje', 'cmj_aterrizaje_raw', 'cmj_aterrizaje_z', HOT, 'N'),
+             ('Fuerza concéntrica', 'cmj_concentric_force_raw', 'cmj_concentric_force_z', '#EC4899', 'N'),
+             ('Impulso concéntrico', 'cmj_concentric_impulse_raw', 'cmj_concentric_impulse_z', '#67E8F9', 'Ns'),
         ]
     },
+  
     'sj': {
         'title': 'SJ — Squat Jump',
         'color': COOL,
         'metrics': [
-            ('Altura de salto',      'sj_altura_raw',     'sj_altura_z',     TEAL, 'cm'),
-            ('Tiempo de vuelo',      'sj_vuelo_raw',      'sj_vuelo_z',      COOL, 'ms'),
-            ('Velocidad vertical',   'sj_takeoff_velocity_raw', 'sj_takeoff_vertical_z', '#F97316', 'm/s'),
-            ('Potencia concéntrica',    'sj_potencia_raw',   'sj_potencia_z',   GOLD, 'W'),
-            ('Potencia máxima',      'sj_peak_power_raw', 'sj_peak_power_z', '#A3E635', ''),
-            ('Fuerza de aterrizaje', 'sj_aterrizaje_raw', 'sj_aterrizaje_z', HOT,  'N'),
-            ('Fuerza concéntrica', 'sj_concentric_force_raw', 'sj_concentric_force_z', '#EC4899', ''),
-            ('Impulso concéntrico', 'sj_concentric_impulse_raw', 'sj_concentric_impulse_z', '#67E8F9', ''),
-        ]
-    },
+            ('Altura de salto', 'sj_altura_raw', 'sj_altura_z', TEAL, 'cm'),
+            ('Tiempo de vuelo', 'sj_vuelo_raw', 'sj_vuelo_z', COOL, 'ms'),
+            ('Velocidad vertical', 'sj_takeoff_velocity_raw', 'sj_takeoff_velocity_z', '#F97316', 'm/s'),  # ← CORREGIDO
+            ('Potencia concéntrica', 'sj_potencia_raw', 'sj_potencia_z', GOLD, 'W'),
+            ('Potencia máxima', 'sj_peak_power_raw', 'sj_peak_power_z', '#A3E635', 'W'),
+            ('Fuerza de aterrizaje', 'sj_aterrizaje_raw', 'sj_aterrizaje_z', HOT, 'N'),
+            ('Fuerza concéntrica', 'sj_concentric_force_raw', 'sj_concentric_force_z', '#EC4899', 'N'),
+            ('Impulso concéntrico', 'sj_concentric_impulse_raw', 'sj_concentric_impulse_z', '#67E8F9', 'Ns'),
+       ]
+},
     'dj': {
-        'title': 'DJ',
+        'title': 'DJ — Drop Jump',
         'color': TEAL,
         'metrics': [
-            ('Altura de salto',      'dj_altura_raw',     'dj_altura_z',     TEAL, 'cm'),
-            ('Tiempo de vuelo',      'dj_vuelo_raw',      'dj_vuelo_z',      COOL, 'ms'),
-            ('RSI',                  'dj_rsi_raw',        'dj_rsi_z',        '#8B5CF6', ''),
-            ('Velocidad vertical',   'dj_takeoff_velocity_raw', 'dj_takeoff_vertical_z', '#F97316', 'm/s'),
-            ('Potencia concéntrica',    'dj_potencia_raw',   'dj_potencia_z',   GOLD, 'W'),
-            ('Potencia máxima',      'dj_peak_power_raw', 'dj_peak_power_z', '#A3E635', ''),
-            ('Fuerza de aterrizaje', 'dj_aterrizaje_raw', 'dj_aterrizaje_z', HOT,  'N'),
-            ('Fuerza concéntrica', 'dj_concentric_force_raw', 'dj_concentric_force_z', '#EC4899', ''),
-            ('Impulso concéntrico', 'dj_concentric_impulse_raw', 'dj_concentric_impulse_z', '#67E8F9', ''),
-            
-            
-        ]
-    },
+            ('Altura de salto', 'dj_altura_raw', 'dj_altura_z', TEAL, 'cm'),
+            ('Tiempo de vuelo', 'dj_vuelo_raw', 'dj_vuelo_z', COOL, 'ms'),
+            ('RSI', 'dj_rsi_raw', 'dj_rsi_z', '#8B5CF6', ''),
+            ('Velocidad vertical', 'dj_takeoff_velocity_raw', 'dj_takeoff_velocity_z', '#F97316', 'm/s'),  # ← CORREGIDO
+            ('Potencia concéntrica', 'dj_potencia_raw', 'dj_potencia_z', GOLD, 'W'),
+            ('Potencia máxima', 'dj_peak_power_raw', 'dj_peak_power_z', '#A3E635', 'W'),
+            ('Fuerza de aterrizaje', 'dj_aterrizaje_raw', 'dj_aterrizaje_z', HOT, 'N'),
+            ('Fuerza concéntrica', 'dj_concentric_force_raw', 'dj_concentric_force_z', '#EC4899', 'N'),
+            ('Impulso concéntrico', 'dj_concentric_impulse_raw', 'dj_concentric_impulse_z', '#67E8F9', 'Ns'),
+       ]
+},
 }
 
 # ── Normalizar métricas de salto a 0-100 para el radar ──
