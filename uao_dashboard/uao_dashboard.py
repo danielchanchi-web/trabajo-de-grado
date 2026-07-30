@@ -260,9 +260,6 @@ except Exception as e:
     })
 
 ALL_IDS = df['Nombre'].tolist()
-  
-
-ALL_IDS = df['Nombre'].tolist()
 
 # ══════════════════════════════════════════
 # PALETA
