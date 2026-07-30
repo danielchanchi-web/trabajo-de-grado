@@ -1434,8 +1434,9 @@ html.Div([
               'maxWidth': '1500px', 'margin': '0 auto'}),
 
     # ── Stores ──
-    dcc.Store(id='st-tab',  data='rend'),
+    dcc.Store(id='st-tab', data='rend'),
     dcc.Store(id='st-jtab', data='cmj'),
+    dcc.Store(id='data-store', data=df.to_json(orient='records')),  # ← NUEVO
 
 ], style={'background': BG, 'minHeight': '100vh', 'color': TEXT,
           'fontFamily': 'Inter,sans-serif'})
@@ -1677,59 +1678,43 @@ def jump_section(c_cmj, c_sj, c_dj, player_sel, highlights, main_tab, cur_tab):
         html.Div([bar_header, bar_content]),
     )
   
-# ══════════════════════════════════════════
-# CALLBACK PARA IMPORTAR DATOS
-# ══════════════════════════════════════════
 @app.callback(
     Output('upload-status', 'children'),
     Output('upload-status', 'style'),
+    Output('data-store', 'data'),  # ← NUEVO: actualiza el Store
     Input('upload-data', 'contents'),
     State('upload-data', 'filename'),
 )
 def upload_data(contents, filename):
     if contents is None:
-        return '', {'display': 'none'}
+        return '', {'display': 'none'}, df.to_json(orient='records')
     
     try:
         # Decodificar el archivo
         content_type, content_string = contents.split(',')
         decoded = base64.b64decode(content_string)
         
-        # Guardar el archivo temporalmente
+        # Crear archivo temporal
         import io
         import tempfile
-        
-        # Crear archivo temporal
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
             tmp_file.write(decoded)
             tmp_path = tmp_file.name
-                
-        # Cargar los datos usando tu función existente
+        
+        # Cargar los datos
         global df, ALL_IDS
         df = load_data(tmp_path)
         ALL_IDS = df['Nombre'].tolist()
-      
-        for i, row in df.head(5).iterrows():
-            nombre = row['Nombre']
-            altura = row.get('cmj_altura_raw', 'N/A')
-            print(f"{nombre}: Altura CMJ = {altura}")
         
         # Limpiar archivo temporal
         os.unlink(tmp_path)
-        
-        # Actualizar las opciones del dropdown
-        options = [{'label': pid, 'value': pid} 
-                   for pid in sorted(ALL_IDS, key=lambda x: int(x.split('_')[1]))]
-        
-        # Actualizar el dropdown (necesitamos un Output extra)
-        # Por eso vamos a usar un Store o un callback adicional
         
         return f'✅ {len(df)} deportistas cargados desde {filename}', {
             'fontSize': '12px',
             'color': TEAL,
             'marginLeft': '12px',
             'display': 'inline-block'
-        }
+        }, df.to_json(orient='records')  # ← Guarda los datos en el Store
         
     except Exception as e:
         return f'❌ Error: {str(e)}', {
@@ -1737,23 +1722,26 @@ def upload_data(contents, filename):
             'color': HOT,
             'marginLeft': '12px',
             'display': 'inline-block'
-        }
+        }, df.to_json(orient='records')  # ← Mantiene los datos actuales
 
 @app.callback(
     Output('rend-player-select', 'options'),
     Output('jump-player-select', 'options'),
-    Input('upload-data', 'contents'),
+    Input('data-store', 'data'),
 )
-def update_dropdowns(contents):
-    if contents is None:
-        # Opciones por defecto
-        options = [{'label': pid, 'value': pid} 
-                   for pid in sorted(ALL_IDS, key=lambda x: int(x.split('_')[1]))]
-        return options, options
+def update_dropdowns_from_store(data):
+    if data is None:
+        return [], []
     
-    # Usar los datos ya actualizados en la variable global
+    # Convertir los datos del Store a DataFrame
+    df_store = pd.read_json(data)
+    ids = df_store['Nombre'].tolist()
+    
+    if not ids:
+        return [], []
+    
     options = [{'label': pid, 'value': pid} 
-               for pid in sorted(ALL_IDS, key=lambda x: int(x.split('_')[1]))]
+               for pid in sorted(ids, key=lambda x: int(x.split('_')[1]))]
     return options, options
 
 # ══════════════════════════════════════════
