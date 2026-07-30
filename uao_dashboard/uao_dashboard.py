@@ -607,12 +607,12 @@ def build_jump_highlight_traces(sub_full, highlights, jump_type):
         sub_full_copy = sub_full.copy()
         sub_full_copy['avg_z'] = sub_full_copy[cols_z].mean(axis=1)
         best_row = sub_full_copy.loc[sub_full_copy['avg_z'].idxmax()].copy()
-        best_row['Nombre'] = f'★ Mejor ({best_row["Nombre"]})'
+        best_row['Nombre'] = f'★ Alto rendimiento ({best_row["Nombre"]})'
         traces.append(('best', best_row))
     
     if 'avg' in highlights:
         avg_series = pd.Series({
-            'Nombre': 'Promedio grupo',
+            'Nombre': 'Promedio grupal',
         })
         # Calcular promedio de cada columna Z
         for col in cols_z:
@@ -623,7 +623,7 @@ def build_jump_highlight_traces(sub_full, highlights, jump_type):
         sub_full_copy = sub_full.copy()
         sub_full_copy['avg_z'] = sub_full_copy[cols_z].mean(axis=1)
         worst_row = sub_full_copy.loc[sub_full_copy['avg_z'].idxmin()].copy()
-        worst_row['Nombre'] = f'▼ Peor ({worst_row["Nombre"]})'
+        worst_row['Nombre'] = f'▼ Bajo rendimiento ({worst_row["Nombre"]})'
         traces.append(('worst', worst_row))
     
     return traces
