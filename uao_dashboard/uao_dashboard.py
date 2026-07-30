@@ -119,26 +119,27 @@ def load_data(path):
     ds['Nombre'] = ds['Nombre'].astype(str).str.strip()
     ds = ds.reset_index(drop=True)
 
-        # ── VERIFICACIÓN TEMPORAL (se verá en logs de Railway) ──
-    print("=== VERIFICACIÓN DE COLUMNAS DE SALTOS ===")
-    print(f"Columnas en 'Saltos': {len(ds.columns)}")
+         # ── INSpeccionar TODOS los nombres de columnas ──
+    print("\n=== TODAS LAS COLUMNAS EN SALTOS ===")
+    for i, col in enumerate(ds.columns):
+        print(f"{i+1}. '{col}'")
     
-    # Mostrar las primeras 10 columnas para inspeccionar
-    print("Primeras 10 columnas:")
-    for i, col in enumerate(ds.columns[:10]):
-        print(f"  {i+1}. '{col}'")
-    
-    # Verificar columnas _raw
-    raw_cols_test = ['cmj_altura_raw', 'cmj_vuelo_raw', 'cmj_rsi_raw', 
-                     'sj_altura_raw', 'dj_altura_raw', 'cmj_potencia_raw']
-    print("\nVerificando columnas _raw:")
-    for col in raw_cols_test:
-        if col in ds.columns:
-            # Mostrar un ejemplo de valor
-            sample = ds[col].dropna().iloc[0] if ds[col].notna().any() else 'sin datos'
-            print(f"  ✅ {col}: {ds[col].notna().sum()} valores, ej: {sample}")
-        else:
-            print(f"  ❌ {col}: NO ENCONTRADA")
+    # ── Buscar específicamente las columnas que necesitamos ──
+    print("\n=== BUSCANDO COLUMNAS ESPECÍFICAS ===")
+    patrones_buscar = [
+        'flight_time_cmj',
+        'RSI_cmj',
+        'avg_propulsive_power_cmj',
+        'peak_landing_force_cmj',
+        'takeoff_velocity_cmj',
+        'flight_time_sj',
+        'flight_time_dj',
+        'RSI_dj',
+    ]
+    for patron in patrones_buscar:
+        encontradas = [col for col in ds.columns if patron.lower() in col.lower()]
+        print(f"Patrón '{patron}': {encontradas if encontradas else 'NO ENCONTRADAS'}")
+
   
     # ── Función: promedia los intentos _1, _2, _3 de un patrón ──
     def prom_intentos(ds_local, patron):
@@ -522,7 +523,7 @@ def detail_card(row):
 # ══════════════════════════════════════════
 # JUMP METRICS CONFIG  (métricas exactas solicitadas)
 # ══════════════════════════════════════════
-JUMP_CFG = {
+ = {
     'cmj': {
         'title': 'CMJ — Countermovement Jump',
         'color': HOT,
