@@ -147,13 +147,19 @@ def load_data(path):
         z = zscore_grupo(pd.to_numeric(ds[col], errors='coerce'))
         ds[z_col] = (-z).round(3)
 
-    # ── UNIR TODO usando los nombres de la hoja "Saltos" como base ──
-    # Usamos ds como base en lugar de dg
-    df = ds[['Nombre']].copy()
+    # ══════════════════════════════════════════
+    # UNIR TODO usando los nombres de la hoja "Saltos" como base
+    # ══════════════════════════════════════════
+    
+    # df comienza con TODOS los datos de ds (incluye columnas _raw y _z)
+    df = ds.copy()
+    
+    # Unir con las otras hojas
     df = df.merge(dv, on='Nombre', how='left')
     df = df.merge(d5, on='Nombre', how='left')
     df = df.merge(dsd, on='Nombre', how='left')
-    df = df.merge(ds, on='Nombre', how='left')
+    
+    # ⚠️ NO hacer merge con ds porque ya está incluido
 
     # ── Overall Z y nivel ──
     df['Overall_Z'] = df[['Vel_Z', 'Ag_Z', 'Star_Z']].mean(axis=1).round(3)
