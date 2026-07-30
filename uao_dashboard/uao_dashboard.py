@@ -214,6 +214,13 @@ try:
         print("⚠️  columna 'cmj_altura_raw' no encontrada")
         print(f"   Columnas disponibles: {df.columns.tolist()[:15]}...")
 
+    # ── Verificación adicional: Mostrar todos los jugadores ──
+    print("\n=== PRIMEROS 5 JUGADORES ===")
+    for i, row in df.head(5).iterrows():
+        nombre = row['Nombre']
+        altura = row.get('cmj_altura_raw', 'N/A')
+        print(f"{nombre}: Altura = {altura}")
+
 except Exception as e:
     print(f"⚠️  Error cargando Excel: {e}")
     # ... datos de ejemplo ...
