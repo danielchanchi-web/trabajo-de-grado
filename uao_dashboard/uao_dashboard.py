@@ -1717,11 +1717,23 @@ def upload_data(contents, filename):
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
             tmp_file.write(decoded)
             tmp_path = tmp_file.name
-        
+          
+         # ── VERIFICACIÓN ANTES DE CARGAR ──
+        print(f"\n📂 Cargando archivo: {filename}")
+
+      
         # Cargar los datos usando tu función existente
         global df, ALL_IDS
         df = load_data(tmp_path)
         ALL_IDS = df['Nombre'].tolist()
+
+         # ── VERIFICACIÓN DESPUÉS DE CARGAR ──
+        print(f"✅ {len(df)} deportistas cargados")
+        print("\n=== PRIMEROS 5 JUGADORES ===")
+        for i, row in df.head(5).iterrows():
+            nombre = row['Nombre']
+            altura = row.get('cmj_altura_raw', 'N/A')
+            print(f"{nombre}: Altura CMJ = {altura}")
         
         # Limpiar archivo temporal
         os.unlink(tmp_path)
