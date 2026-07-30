@@ -247,6 +247,7 @@ except Exception as e:
               'dj_altura', 'dj_rsi', 'dj_impacto', 'dj_aterrizaje', 'dj_tiempo']:
         df[k] = np.random.uniform(0.2, 0.8, 27).round(3)
     df = df.sort_values('Overall', ascending=False).reset_index(drop=True)
+  
 
 ALL_IDS = df['Nombre'].tolist()
 
