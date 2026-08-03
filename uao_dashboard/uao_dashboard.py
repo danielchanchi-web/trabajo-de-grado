@@ -1579,9 +1579,10 @@ def main_tabs(r, s, cur):
 )
 
 def jump_section(c_cmj, c_sj, c_dj, player_sel, highlights, main_tab, cur_tab, data):
-df = pd.read_json(data) if data else EMPTY_DF
+
     if main_tab != 'salt':
         return (no_update, no_update, no_update, no_update, no_update, no_update, no_update)
+    df = pd.read_json(data) if data else EMPTY_DF
     
     ctx = callback_context
     tid = ctx.triggered[0]['prop_id'] if ctx.triggered else ''
