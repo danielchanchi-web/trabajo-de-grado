@@ -1249,7 +1249,12 @@ html.Div([
 
             dbc.Row([
                 dbc.Col(card('Perfil por métricas', 'Radar comparativo',
-                             dcc.Graph(id='chart-radar', config={'displayModeBar': False})),
+                             dcc.Graph(id='chart-radar', config={'displayModeBar': False},
+                                       figure=go.Figure().update_layout(
+                                           paper_bgcolor=SURF, plot_bgcolor=SURF,
+                                           xaxis=dict(visible=False), yaxis=dict(visible=False),
+                                           margin=dict(l=0, r=0, t=0, b=0),
+                                       ))),
                         md=6, style={'marginBottom': '14px'}),
                 dbc.Col([
                     card('Comparación directa', 'Clic en barra → ver detalle', [
@@ -1262,7 +1267,12 @@ html.Div([
                             ], style={'fontSize': '11px', 'color': MUTED, 'marginRight': '14px'})
                               for lbl, c in [('Alto', TEAL), ('Medio', GOLD), ('Bajo', HOT)]],
                         ], style={'marginBottom': '8px'}),
-                        dcc.Graph(id='chart-bar', config={'displayModeBar': False}),
+                        dcc.Graph(id='chart-bar', config={'displayModeBar': False},
+                                  figure=go.Figure().update_layout(
+                                      paper_bgcolor=SURF, plot_bgcolor=SURF,
+                                      xaxis=dict(visible=False), yaxis=dict(visible=False),
+                                      margin=dict(l=0, r=0, t=0, b=0),
+                                  )),
                     ]),
                 ], md=6, style={'marginBottom': '14px'}),
             ]),
@@ -1475,6 +1485,28 @@ def update_charts(sel, highlights, data):
     n   = len(sub)
 
     # Si no hay selección individual ni highlights, mostrar vacío
+    # ── Caso 1: aún no se ha importado ningún Excel → caja totalmente en blanco ──
+    if df.empty:
+        blank_fig = go.Figure().update_layout(
+            paper_bgcolor=SURF, plot_bgcolor=SURF,
+            xaxis=dict(visible=False), yaxis=dict(visible=False),
+            margin=dict(l=0, r=0, t=0, b=0),
+        )
+        empty_stats = [
+            dbc.Col(html.Div([
+                html.Div('—', style={'fontFamily': 'Space Grotesk,sans-serif',
+                                     'fontSize': '24px', 'fontWeight': '700',
+                                     'color': TEXT, 'lineHeight': '1', 'marginBottom': '3px'}),
+                html.Div(lbl, style={'fontSize': '10px', 'color': MUTED,
+                                     'textTransform': 'uppercase', 'letterSpacing': '.6px'}),
+            ], style={'background': SURF, 'border': f'1px solid {FAINT}',
+                      'borderRadius': '10px', 'padding': '14px 16px'}),
+            xs=6, md=3, className='g-2')
+            for lbl in ['Total deportistas', 'Nivel alto', 'Nivel medio', 'Nivel bajo']
+        ]
+        return blank_fig, blank_fig, empty_stats
+
+    # ── Caso 2: ya hay datos importados, pero no hay selección/highlight → mensaje ──
     if not sel and not highlights:
         empty_fig = go.Figure().update_layout(
             paper_bgcolor=SURF, plot_bgcolor=SURF,
