@@ -552,7 +552,7 @@ JUMP_CFG = {
 }
 
 # ── Normalizar métricas de salto a 0-100 para el radar ──
-def normalize_jump_metrics(jump_type, player_ids):
+def normalize_jump_metrics(df, jump_type, player_ids):
     """Devuelve df con columnas _N (0-100) para cada métrica del tipo de salto."""
     cfg  = JUMP_CFG[jump_type]
     cols = [col for _, col, _, _ in cfg['metrics']]
@@ -617,7 +617,7 @@ def build_jump_highlight_traces(sub_full, highlights, jump_type):
     
     return traces
 
-def fig_jump_radar(jump_type, player_ids, highlight_traces=None):
+def fig_jump_radar(df, jump_type, player_ids, highlight_traces=None):
     """
     Genera radar de salto con soporte para highlights (mejor, promedio, peor).
     """
@@ -868,7 +868,7 @@ def fig_jump_radar(jump_type, player_ids, highlight_traces=None):
     )
     return fig
 
-def fig_jump_bar(jump_type, player_ids):
+def fig_jump_bar(df, jump_type, player_ids):
     """Barras agrupadas con valores reales (sin normalizar) por jugador."""
     cfg    = JUMP_CFG[jump_type]
     labels   = [lbl   for lbl, _, _, _, _  in cfg['metrics']]
@@ -922,7 +922,7 @@ def fig_jump_bar(jump_type, player_ids):
     return fig
 
 
-def jump_metric_cards(jump_type, player_ids):
+def jump_metric_cards(df, jump_type, player_ids):
     """Tarjetas de resumen con valor promedio de cada métrica."""
     cfg = JUMP_CFG[jump_type]
     sub = df[df['Nombre'].isin(player_ids)]
@@ -1169,9 +1169,25 @@ html.Div([
         'display': 'inline-block'
     }),
 ], style={'display': 'flex', 'alignItems': 'center'}),
-
+  
+# ── PANTALLA VACÍA (sin datos en la sesión) ──
+    html.Div(id='empty-state', children=[
+        html.Div([
+            html.Div('📊', style={'fontSize': '48px', 'marginBottom': '18px'}),
+            html.Div('Aún no hay deportistas cargados',
+                     style={'fontSize': '18px', 'fontWeight': '600', 'color': TEXT,
+                            'marginBottom': '8px', 'fontFamily': 'Inter,sans-serif'}),
+            html.Div('Usa el botón "Importar datos" arriba para subir el Excel del equipo.',
+                     style={'fontSize': '13px', 'color': MUTED, 'maxWidth': '360px',
+                            'textAlign': 'center', 'lineHeight': '1.5'}),
+        ], style={'display': 'flex', 'flexDirection': 'column', 'alignItems': 'center',
+                  'justifyContent': 'center'}),
+    ], style={'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center',
+              'minHeight': '420px', 'maxWidth': '1500px', 'margin': '0 auto',
+              'padding': '22px 28px'}),
+  
     # ── BODY (sidebar + contenido) ──
-    html.Div([
+    html.Div(id='dashboard-body', children=[
 
         # ── SIDEBAR ──
         html.Div([
@@ -1201,8 +1217,7 @@ html.Div([
                                                 'whiteSpace': 'nowrap'}),
                 dcc.Dropdown(
                     id='rend-player-select',
-                    options=[{'label': pid, 'value': pid}
-                             for pid in sorted(ALL_IDS, key=lambda x: int(x.split('_')[1]))],
+                    options=[],  # se llena vía callback update_dropdowns_from_store, desde data-store
                     value=[],
                     multi=True,
                     placeholder='Seleccionar deportistas...',
@@ -1331,8 +1346,7 @@ html.Div([
                                      'whiteSpace': 'nowrap'}),
                     dcc.Dropdown(
                         id='jump-player-select',
-                        options=[{'label': pid, 'value': pid}
-                                 for pid in sorted(ALL_IDS, key=lambda x: int(x.split('_')[1]))],
+                        options=[],  # se llena vía callback update_dropdowns_from_store, desde data-store
                         value=[],
                         multi=True,
                         placeholder='Seleccionar jugadores...',
@@ -1436,7 +1450,7 @@ html.Div([
     # ── Stores ──
     dcc.Store(id='st-tab', data='rend'),
     dcc.Store(id='st-jtab', data='cmj'),
-    dcc.Store(id='data-store', data=df.to_json(orient='records')),  # ← NUEVO
+    dcc.Store(id='data-store', storage_type='session', data=none),  # ← NUEVO
 
 ], style={'background': BG, 'minHeight': '100vh', 'color': TEXT,
           'fontFamily': 'Inter,sans-serif'})
@@ -1449,8 +1463,11 @@ html.Div([
     Output('stats-row',   'children'),
     Input('rend-player-select', 'value'),
     Input('rend-highlights',    'value'),
+    State('data-store', 'data'),
 )
-def update_charts(sel, highlights):
+
+df = pd.read_json(data) if data else EMPTY_DF
+def update_charts(sel, highlights, data):
     sel        = sel or []
     highlights = highlights or []
 
@@ -1558,8 +1575,11 @@ def main_tabs(r, s, cur):
     Input('st-tab',              'data'),
 
     State('st-jtab', 'data'),
+    State('data-store', 'data'),
 )
-def jump_section(c_cmj, c_sj, c_dj, player_sel, highlights, main_tab, cur_tab):
+
+df = pd.read_json(data) if data else EMPTY_DF
+def jump_section(c_cmj, c_sj, c_dj, player_sel, highlights, main_tab, cur_tab, data):
 
     if main_tab != 'salt':
         return (no_update, no_update, no_update, no_update, no_update, no_update, no_update)
@@ -1622,13 +1642,13 @@ def jump_section(c_cmj, c_sj, c_dj, player_sel, highlights, main_tab, cur_tab):
                 'boxShadow': f'0 0 12px {tab_colors[t]}55' if on else 'none'}
 
     # ── Tarjetas de métricas ──
-    cards = jump_metric_cards(tab, sel)
+    cards = jump_metric_cards(df, tab, sel)
 
     # ── Construir highlights ──           # ← NUEVO BLOQUE
     highlight_traces = build_jump_highlight_traces(df, highlights, tab)
   
     # ── Radar chart con highlights ──
-    jradar = fig_jump_radar(tab, sel, highlight_traces)   # ← MODIFICADO
+    jradar = fig_jump_radar(df, tab, sel, highlight_traces)   # ← MODIFICADO
     radar_content = (
         dcc.Graph(figure=jradar, config={'displayModeBar': False})
         if jradar else
@@ -1641,7 +1661,7 @@ def jump_section(c_cmj, c_sj, c_dj, player_sel, highlights, main_tab, cur_tab):
     )
 
     # Bar chart
-    jbar = fig_jump_bar(tab, sel)
+    jbar = fig_jump_bar(df, tab, sel)
     bar_content = (
         dcc.Graph(figure=jbar, config={'displayModeBar': False})
         if jbar else
@@ -1686,10 +1706,9 @@ def jump_section(c_cmj, c_sj, c_dj, player_sel, highlights, main_tab, cur_tab):
     State('upload-data', 'filename'),
 )
 def upload_data(contents, filename):
-    global df, ALL_IDS  # ← global AL PRINCIPIO
     
     if contents is None:
-        return '', {'display': 'none'}, df.to_json(orient='records') if not df.empty else '{}'
+        return '', {'display': 'none'}, no_update
     
     try:
         # Decodificar el archivo
@@ -1704,18 +1723,17 @@ def upload_data(contents, filename):
             tmp_path = tmp_file.name
         
         # Cargar los datos
-        df = load_data(tmp_path)
-        ALL_IDS = df['Nombre'].tolist()
+        df_nuevo = load_data(tmp_path)
         
         # Limpiar archivo temporal
         os.unlink(tmp_path)
         
-        return f'✅ {len(df)} deportistas cargados desde {filename}', {
+        return f'✅ {len(df_nuevo)} deportistas cargados desde {filename}', {
             'fontSize': '12px',
             'color': TEAL,
             'marginLeft': '12px',
             'display': 'inline-block'
-        }, df.to_json(orient='records')
+        }, df_nuevo.to_json(orient='records')
         
     except Exception as e:
         return f'❌ Error: {str(e)}', {
@@ -1723,7 +1741,7 @@ def upload_data(contents, filename):
             'color': HOT,
             'marginLeft': '12px',
             'display': 'inline-block'
-        }, df.to_json(orient='records') if not df.empty else '{}'
+        }, no_update
 
 @app.callback(
     Output('rend-player-select', 'options'),
@@ -1744,6 +1762,27 @@ def update_dropdowns_from_store(data):
     options = [{'label': pid, 'value': pid} 
                for pid in sorted(ids, key=lambda x: int(x.split('_')[1]))]
     return options, options
+
+@app.callback(
+    Output('dashboard-body', 'style'),
+    Output('empty-state', 'style'),
+    Input('data-store', 'data'),
+)
+def toggle_empty_state(data):
+    has_data = bool(data) and data not in ('{}', '[]', 'null')
+
+    dashboard_style_visible = {'display': 'flex', 'gap': '20px', 'padding': '22px 28px',
+                                'maxWidth': '1500px', 'margin': '0 auto'}
+    dashboard_style_hidden = {'display': 'none'}
+
+    empty_style_visible = {'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center',
+                            'minHeight': '420px', 'maxWidth': '1500px', 'margin': '0 auto',
+                            'padding': '22px 28px'}
+    empty_style_hidden = {'display': 'none'}
+
+    if has_data:
+        return dashboard_style_visible, empty_style_hidden
+    return dashboard_style_hidden, empty_style_visible
 
 # ══════════════════════════════════════════
 # RUN
