@@ -1466,8 +1466,8 @@ html.Div([
     State('data-store', 'data'),
 )
 
-df = pd.read_json(data) if data else EMPTY_DF
 def update_charts(sel, highlights, data):
+    df = pd.read_json(data) if data else EMPTY_DF
     sel        = sel or []
     highlights = highlights or []
 
