@@ -1578,9 +1578,8 @@ def main_tabs(r, s, cur):
     State('data-store', 'data'),
 )
 
-df = pd.read_json(data) if data else EMPTY_DF
 def jump_section(c_cmj, c_sj, c_dj, player_sel, highlights, main_tab, cur_tab, data):
-
+df = pd.read_json(data) if data else EMPTY_DF
     if main_tab != 'salt':
         return (no_update, no_update, no_update, no_update, no_update, no_update, no_update)
     
