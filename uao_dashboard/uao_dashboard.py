@@ -1249,12 +1249,7 @@ html.Div([
 
             dbc.Row([
                 dbc.Col(card('Perfil por métricas', 'Radar comparativo',
-                             dcc.Graph(id='chart-radar', config={'displayModeBar': False},
-                                       figure=go.Figure().update_layout(
-                                           paper_bgcolor=SURF, plot_bgcolor=SURF,
-                                           xaxis=dict(visible=False), yaxis=dict(visible=False),
-                                           margin=dict(l=0, r=0, t=0, b=0),
-                                       ))),
+                             html.Div(id='chart-radar-wrap')),
                         md=6, style={'marginBottom': '14px'}),
                 dbc.Col([
                     card('Comparación directa', 'Clic en barra → ver detalle', [
@@ -1267,12 +1262,7 @@ html.Div([
                             ], style={'fontSize': '11px', 'color': MUTED, 'marginRight': '14px'})
                               for lbl, c in [('Alto', TEAL), ('Medio', GOLD), ('Bajo', HOT)]],
                         ], style={'marginBottom': '8px'}),
-                        dcc.Graph(id='chart-bar', config={'displayModeBar': False},
-                                  figure=go.Figure().update_layout(
-                                      paper_bgcolor=SURF, plot_bgcolor=SURF,
-                                      xaxis=dict(visible=False), yaxis=dict(visible=False),
-                                      margin=dict(l=0, r=0, t=0, b=0),
-                                  )),
+                        html.Div(id='chart-bar-wrap'),
                     ]),
                 ], md=6, style={'marginBottom': '14px'}),
             ]),
@@ -1468,8 +1458,8 @@ html.Div([
 
 # 3 · Charts + stats + crumb + undo/redo
 @app.callback(
-    Output('chart-radar', 'figure'),
-    Output('chart-bar',   'figure'),
+    Output('chart-radar-wrap', 'children'),
+    Output('chart-bar-wrap',   'children'),
     Output('stats-row',   'children'),
     Input('rend-player-select', 'value'),
     Input('rend-highlights',    'value'),
@@ -1487,11 +1477,6 @@ def update_charts(sel, highlights, data):
     # Si no hay selección individual ni highlights, mostrar vacío
     # ── Caso 1: aún no se ha importado ningún Excel → caja totalmente en blanco ──
     if df.empty:
-        blank_fig = go.Figure().update_layout(
-            paper_bgcolor=SURF, plot_bgcolor=SURF,
-            xaxis=dict(visible=False), yaxis=dict(visible=False),
-            margin=dict(l=0, r=0, t=0, b=0),
-        )
         empty_stats = [
             dbc.Col(html.Div([
                 html.Div('—', style={'fontFamily': 'Space Grotesk,sans-serif',
@@ -1504,7 +1489,7 @@ def update_charts(sel, highlights, data):
             xs=6, md=3, className='g-2')
             for lbl in ['Total deportistas', 'Nivel alto', 'Nivel medio', 'Nivel bajo']
         ]
-        return blank_fig, blank_fig, empty_stats
+        return html.Div(), html.Div(), empty_stats
 
     # ── Caso 2: ya hay datos importados, pero no hay selección/highlight → mensaje ──
     if not sel and not highlights:
@@ -1529,7 +1514,11 @@ def update_charts(sel, highlights, data):
             xs=6, md=3, className='g-2')
             for lbl in ['Total deportistas', 'Nivel alto', 'Nivel medio', 'Nivel bajo']
         ]
-        return empty_fig, empty_fig, empty_stats
+        return (
+            html.Div(dcc.Graph(figure=empty_fig, config={'displayModeBar': False})),
+            html.Div(dcc.Graph(figure=empty_fig, config={'displayModeBar': False})),
+            empty_stats,
+        )
 
     def stat_card(val, lbl, color, icon):
         return dbc.Col(html.Div([
@@ -1558,7 +1547,11 @@ def update_charts(sel, highlights, data):
     ]
 
     highlight_traces = build_highlight_traces(df, highlights)
-    return (fig_radar(sub, highlight_traces), fig_bar(sub), stats)
+    return (
+        html.Div(dcc.Graph(figure=fig_radar(sub, highlight_traces), config={'displayModeBar': False})),
+        html.Div(dcc.Graph(figure=fig_bar(sub), config={'displayModeBar': False})),
+        stats,
+    )
 
 
 # 6 · Tabs principales
