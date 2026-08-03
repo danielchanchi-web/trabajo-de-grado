@@ -1450,7 +1450,7 @@ html.Div([
     # ── Stores ──
     dcc.Store(id='st-tab', data='rend'),
     dcc.Store(id='st-jtab', data='cmj'),
-    dcc.Store(id='data-store', storage_type='session', data=none),  # ← NUEVO
+    dcc.Store(id='data-store', storage_type='session', data=None),  # ← NUEVO
 
 ], style={'background': BG, 'minHeight': '100vh', 'color': TEXT,
           'fontFamily': 'Inter,sans-serif'})
