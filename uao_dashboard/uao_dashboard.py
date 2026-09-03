@@ -427,7 +427,7 @@ def fig_bar(sub):
     ))
     fig.update_layout(
         **PLOT_BASE,
-        height=max(220, len(sub) * 34 + 60),
+        height=340,
         xaxis=dict(range=[-axis_lim, axis_lim], gridcolor=FAINT,
                    tickfont=dict(color=MUTED), zeroline=True, zerolinecolor=FAINT,
                    showline=False),
@@ -463,41 +463,83 @@ def detail_card(row):
 
     return html.Div([
         dbc.Row([
-            dbc.Col([
-                html.Div([
-                    html.Div(row['Nombre'][-3:], style={
-                        'width': '46px', 'height': '46px', 'borderRadius': '50%',
-                        'background': f'linear-gradient(135deg,{COOL},{TEAL})',
-                        'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center',
-                        'fontWeight': '700', 'fontSize': '14px', 'color': '#fff',
-                        'marginRight': '14px', 'flexShrink': '0',
-                    }),
+            dbc.Col(
+                card(
+                    'Perfil por métricas',
+                    'Radar comparativo',
+                    html.Div(
+                        id='chart-radar-wrap',
+                        style={
+                            'height': '340px',
+                            'width': '100%',
+                        }
+                    ),
+                    extra_style={
+                        'height': '410px',
+                        'display': 'flex',
+                        'flexDirection': 'column',
+                    }
+                ),
+                md=6,
+                style={
+                    'marginBottom': '14px',
+                    'display': 'flex',
+                }
+            ),
+        
+            dbc.Col(
+                card(
+                    'Comparación directa',
+                    'Clic en barra → ver detalle',
                     html.Div([
-                        html.Div(row['Nombre'],
-                                 style={'fontFamily': 'Space Grotesk,sans-serif',
-                                        'fontSize': '19px', 'fontWeight': '700'}),
-                        dbc.Badge(row['Nivel'], color=badge_col,
-                                  style={'fontSize': '10px', 'marginTop': '4px'}),
-                    ])
-                ], style={'display': 'flex', 'alignItems': 'center'}),
-            ], md=8),
-            dbc.Col([
-                html.Div(f'{row["Overall"]:.1f}',
-                         style={'fontFamily': 'Space Grotesk,sans-serif',
-                                'fontSize': '38px', 'fontWeight': '700',
-                                'color': nivel_col, 'textAlign': 'right', 'lineHeight': '1'}),
-                html.Div('Score global',
-                         style={'fontSize': '10px', 'color': MUTED,
-                                'textTransform': 'uppercase', 'letterSpacing': '.6px',
-                                'textAlign': 'right'}),
-            ], md=4),
-        ], className='mb-3 align-items-center'),
-        dbc.Row([
-            mblock('Velocidad',  row['Velocidad'], row['Vel_N'],  HOT),
-            mblock('5 - 10 - 5', row['5_10_5'],   row['Ag_N'],   COOL),
-            mblock('Star Drill', row['StarDrill'], row['Star_N'], TEAL),
-        ]),
-    ])
+                        html.Div([
+                            *[
+                                html.Span([
+                                    html.Span(style={
+                                        'display': 'inline-block',
+                                        'width': '7px',
+                                        'height': '7px',
+                                        'borderRadius': '50%',
+                                        'background': c,
+                                        'marginRight': '5px'
+                                    }),
+                                    lbl,
+                                ], style={
+                                    'fontSize': '11px',
+                                    'color': MUTED,
+                                    'marginRight': '14px'
+                                })
+                                for lbl, c in [
+                                    ('Alto', TEAL),
+                                    ('Medio', GOLD),
+                                    ('Bajo', HOT)
+                                ]
+                            ],
+                        ], style={'marginBottom': '8px'}),
+        
+                        html.Div(
+                            id='chart-bar-wrap',
+                            style={
+                                'height': '340px',
+                                'width': '100%',
+                            }
+                        ),
+                    ]),
+                    extra_style={
+                        'height': '410px',
+                        'display': 'flex',
+                        'flexDirection': 'column',
+                    }
+                ),
+                md=6,
+                style={
+                    'marginBottom': '14px',
+                    'display': 'flex',
+                }
+            ),
+        ], style={
+            'alignItems': 'stretch',
+        })
 
 
 # ══════════════════════════════════════════
@@ -1548,8 +1590,13 @@ def update_charts(sel, highlights, data):
 
     highlight_traces = build_highlight_traces(df, highlights)
     return (
-        html.Div(dcc.Graph(figure=fig_radar(sub, highlight_traces), config={'displayModeBar': False})),
-        html.Div(dcc.Graph(figure=fig_bar(sub), config={'displayModeBar': False})),
+        html.Div(dcc.Graph(figure=fig_radar(sub, highlight_traces), config={'displayModeBar': False}, 
+        style={'height': '340px'}),
+        style={'height': '340px'}
+        ),
+        html.Div(dcc.Graph(figure=fig_bar(sub), config={'displayModeBar': False},
+        style={'height': '340px'}),
+        style={'height': '340px'}),
         stats,
     )
 
