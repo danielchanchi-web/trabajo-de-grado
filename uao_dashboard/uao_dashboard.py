@@ -1589,14 +1589,24 @@ def update_charts(sel, highlights, data):
     ]
 
     highlight_traces = build_highlight_traces(df, highlights)
+
     return (
-        html.Div(dcc.Graph(figure=fig_radar(sub, highlight_traces), config={'displayModeBar': False}, 
-        style={'height': '340px'}),
-        style={'height': '340px'}
+        html.Div(
+            dcc.Graph(
+                figure=fig_radar(sub, highlight_traces),
+                config={'displayModeBar': False}
+            ),
+            style={'height': '340px'}
         ),
-        html.Div(dcc.Graph(figure=fig_bar(sub), config={'displayModeBar': False},
-        style={'height': '340px'}),
-        style={'height': '340px'}),
+    
+        html.Div(
+            dcc.Graph(
+                figure=fig_bar(sub),
+                config={'displayModeBar': False}
+            ),
+            style={'height': '340px'}
+        ),
+    
         stats,
     )
 
