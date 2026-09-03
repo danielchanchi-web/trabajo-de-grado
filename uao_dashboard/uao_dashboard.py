@@ -754,7 +754,7 @@ def fig_jump_radar(df, jump_type, player_ids, highlight_traces=None):
             ))
         
         fig.update_layout(
-            **PLOT_BASE, height=440,
+            **PLOT_BASE, height=400,
             polar=dict(
                 bgcolor=SURF2,
                 radialaxis=dict(
@@ -837,7 +837,7 @@ def fig_jump_radar(df, jump_type, player_ids, highlight_traces=None):
         ))
     
     fig.update_layout(
-        **PLOT_BASE, height=440,
+        **PLOT_BASE, height=400,
         polar=dict(
             bgcolor=SURF2,
             radialaxis=dict(
@@ -952,7 +952,7 @@ def fig_jump_bar(df, jump_type, player_ids):
             ))
 
     fig.update_layout(
-        **PLOT_BASE, height=340, barmode='group',
+        **PLOT_BASE, height=400, barmode='group',
         xaxis=dict(gridcolor=FAINT, tickfont=dict(color=MUTED, size=11), zeroline=False),
         yaxis=dict(gridcolor=FAINT, tickfont=dict(color=MUTED, size=10),
                    zeroline=True, zerolinecolor=FAINT),
