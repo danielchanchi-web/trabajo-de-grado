@@ -1794,21 +1794,40 @@ def update_dropdowns_from_store(data):
     Input('data-store', 'data'),
 )
 def toggle_empty_state(data):
-    has_data = bool(data) and data not in ('{}', '[]', 'null')
-
-    dashboard_style_visible = {'display': 'flex', 'gap': '20px', 'padding': '22px 28px',
-                                'maxWidth': '1500px', 'margin': '0 auto'}
-    dashboard_style_hidden = {'display': 'none'}
-
-    empty_style_visible = {'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center',
-                            'minHeight': '420px', 'maxWidth': '1500px', 'margin': '0 auto',
-                            'padding': '22px 28px'}
-    empty_style_hidden = {'display': 'none'}
-
-    if has_data:
-        return dashboard_style_visible, empty_style_hidden
-    return dashboard_style_hidden, empty_style_visible
-
+    # Verificar si realmente hay datos cargados
+    # Un data vacío puede ser: None, '', 'null', '{}', '[]'
+    has_data = False
+    
+    if data is not None and data not in ('', 'null', '{}', '[]'):
+        # Intentar cargar como JSON para verificar si tiene contenido válido
+        try:
+            import json
+            parsed = json.loads(data) if isinstance(data, str) else data
+            # Si es una lista o dict y no está vacío
+            if isinstance(parsed, (list, dict)) and len(parsed) > 0:
+                has_data = True
+            elif isinstance(parsed, list) and len(parsed) == 0:
+                has_data = False
+            else:
+                has_data = False
+        except:
+            has_data = False
+    
+    # Si no hay datos → mostrar estado vacío, ocultar dashboard
+    if not has_data:
+        return (
+            {'display': 'none'},  # dashboard oculto
+            {'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center',
+             'minHeight': '420px', 'maxWidth': '1500px', 'margin': '0 auto',
+             'padding': '22px 28px'}  # empty state visible
+        )
+    
+    # Si hay datos → mostrar dashboard, ocultar estado vacío
+    return (
+        {'display': 'flex', 'gap': '20px', 'padding': '22px 28px',
+         'maxWidth': '1500px', 'margin': '0 auto'},  # dashboard visible
+        {'display': 'none'}  # empty state oculto
+    )
 # ══════════════════════════════════════════
 # RUN
 # ══════════════════════════════════════════
