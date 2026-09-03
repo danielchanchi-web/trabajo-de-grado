@@ -540,7 +540,7 @@ def detail_card(row):
         ], style={
             'alignItems': 'stretch',
         })
-    ]
+    ])
 
 # ══════════════════════════════════════════
 # JUMP METRICS CONFIG  (métricas exactas solicitadas)
