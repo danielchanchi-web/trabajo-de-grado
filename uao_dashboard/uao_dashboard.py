@@ -1153,6 +1153,10 @@ header_style = {'display': 'flex', 'justifyContent': 'space-between', 'alignItem
 
 def card(title, hint, children, extra_style=None):
     s = {**card_style, **(extra_style or {})}
+    content_style = {'padding': '14px 16px'}
+    if (extra_style or {}).get('display') == 'flex':
+        content_style.update({'flex': '1', 'display': 'flex',
+                               'flexDirection': 'column', 'minHeight': '0'})
     return html.Div([
         html.Div([
             html.Span(title, style={'fontSize': '11px', 'color': MUTED,
@@ -1160,7 +1164,7 @@ def card(title, hint, children, extra_style=None):
                                     'fontWeight': '600'}),
             html.Span(hint, style={'fontSize': '11px', 'color': FAINT}),
         ], style=header_style),
-        html.Div(children, style={'padding': '14px 16px'}),
+        html.Div(children, style=content_style),
     ], style=s)
 
 
@@ -1289,25 +1293,42 @@ html.Div([
 
             dbc.Row(id='stats-row', className='g-2 mb-3'),
 
-            dbc.Row([
-                dbc.Col(card('Perfil por métricas', 'Radar comparativo',
-                             html.Div(id='chart-radar-wrap')),
-                        md=6, style={'marginBottom': '14px'}),
-                dbc.Col([
-                    card('Comparación directa', 'Clic en barra → ver detalle', [
+                        dbc.Row([
+                dbc.Col(
+                    card(
+                        'Perfil por métricas', 'Radar comparativo',
+                        html.Div(id='chart-radar-wrap',
+                                 style={'flex': '1', 'display': 'flex',
+                                        'flexDirection': 'column', 'justifyContent': 'center'}),
+                        extra_style={'height': '100%', 'display': 'flex',
+                                     'flexDirection': 'column'}
+                    ),
+                    md=6, style={'marginBottom': '14px'}
+                ),
+                dbc.Col(
+                    card(
+                        'Comparación directa', 'Clic en barra → ver detalle',
                         html.Div([
-                            *[html.Span([
-                                html.Span(style={'display': 'inline-block', 'width': '7px',
-                                                 'height': '7px', 'borderRadius': '50%',
-                                                 'background': c, 'marginRight': '5px'}),
-                                lbl,
-                            ], style={'fontSize': '11px', 'color': MUTED, 'marginRight': '14px'})
-                              for lbl, c in [('Alto', TEAL), ('Medio', GOLD), ('Bajo', HOT)]],
-                        ], style={'marginBottom': '8px'}),
-                        html.Div(id='chart-bar-wrap'),
-                    ]),
-                ], md=6, style={'marginBottom': '14px'}),
-            ]),
+                            html.Div([
+                                *[html.Span([
+                                    html.Span(style={'display': 'inline-block', 'width': '7px',
+                                                     'height': '7px', 'borderRadius': '50%',
+                                                     'background': c, 'marginRight': '5px'}),
+                                    lbl,
+                                ], style={'fontSize': '11px', 'color': MUTED, 'marginRight': '14px'})
+                                  for lbl, c in [('Alto', TEAL), ('Medio', GOLD), ('Bajo', HOT)]],
+                            ], style={'marginBottom': '8px'}),
+                            html.Div(id='chart-bar-wrap',
+                                     style={'flex': '1', 'display': 'flex',
+                                            'flexDirection': 'column', 'justifyContent': 'center'}),
+                        ], style={'flex': '1', 'display': 'flex', 'flexDirection': 'column',
+                                  'minHeight': '0'}),
+                        extra_style={'height': '100%', 'display': 'flex',
+                                     'flexDirection': 'column'}
+                    ),
+                    md=6, style={'marginBottom': '14px'}
+                ),
+            ], style={'alignItems': 'stretch'}),
 
             html.Div([
                 html.Div([
@@ -1518,6 +1539,9 @@ def update_charts(sel, highlights, data):
 
     # Si no hay selección individual ni highlights, mostrar vacío
     # ── Caso 1: aún no se ha importado ningún Excel → caja totalmente en blanco ──
+        # Si no hay selección individual ni highlights, mostrar vacío
+    # ── Caso 1: aún no se ha importado ningún Excel ──
+    # Usa la misma estructura/tamaño que "sin selección" pero con texto invisible
     if df.empty:
         empty_stats = [
             dbc.Col(html.Div([
@@ -1531,7 +1555,30 @@ def update_charts(sel, highlights, data):
             xs=6, md=3, className='g-2')
             for lbl in ['Total deportistas', 'Nivel alto', 'Nivel medio', 'Nivel bajo']
         ]
-        return html.Div(), html.Div(), empty_stats
+
+        def hidden_placeholder_fig():
+            return go.Figure().update_layout(
+                paper_bgcolor=SURF, plot_bgcolor=SURF,
+                height=300,
+                xaxis=dict(visible=False), yaxis=dict(visible=False),
+                annotations=[dict(
+                    text='Selecciona al menos un deportista',
+                    x=0.5, y=0.5, xref='paper', yref='paper',
+                    showarrow=False,
+                    font=dict(size=13, color=SURF),  # mismo color que el fondo → invisible
+                )]
+            )
+
+        placeholder_style = {'flex': '1', 'minHeight': '0'}
+        radar_placeholder = html.Div(
+            dcc.Graph(figure=hidden_placeholder_fig(), config={'displayModeBar': False}),
+            style=placeholder_style
+        )
+        bar_placeholder = html.Div(
+            dcc.Graph(figure=hidden_placeholder_fig(), config={'displayModeBar': False}),
+            style=placeholder_style
+        )
+        return radar_placeholder, bar_placeholder, empty_stats
 
     # ── Caso 2: ya hay datos importados, pero no hay selección/highlight → mensaje ──
     if not sel and not highlights:
