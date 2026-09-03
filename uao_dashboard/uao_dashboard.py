@@ -1450,7 +1450,7 @@ html.Div([
     # ── Stores ──
     dcc.Store(id='st-tab', data='rend'),
     dcc.Store(id='st-jtab', data='cmj'),
-    dcc.Store(id='data-store', storage_type='session', data=None),  # ← NUEVO
+    dcc.Store(id='data-store', storage_type='session', data='[]'),  # ← Iniciar con lista vacía
 
 ], style={'background': BG, 'minHeight': '100vh', 'color': TEXT,
           'fontFamily': 'Inter,sans-serif'})
@@ -1733,25 +1733,10 @@ def jump_section(c_cmj, c_sj, c_dj, player_sel, highlights, main_tab, cur_tab, d
 def upload_data(contents, filename):
     
     if contents is None:
-        return '', {'display': 'none'}, no_update
+        return '', {'display': 'none'}, '[]'  # ← Siempre devolver '[]'
     
     try:
-        # Decodificar el archivo
-        content_type, content_string = contents.split(',')
-        decoded = base64.b64decode(content_string)
-        
-        # Crear archivo temporal
-        import io
-        import tempfile
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
-            tmp_file.write(decoded)
-            tmp_path = tmp_file.name
-        
-        # Cargar los datos
-        df_nuevo = load_data(tmp_path)
-        
-        # Limpiar archivo temporal
-        os.unlink(tmp_path)
+        # ... tu código existente ...
         
         return f'✅ {len(df_nuevo)} deportistas cargados desde {filename}', {
             'fontSize': '12px',
@@ -1766,7 +1751,7 @@ def upload_data(contents, filename):
             'color': HOT,
             'marginLeft': '12px',
             'display': 'inline-block'
-        }, no_update
+        }, '[]'  # ← Siempre devolver '[]' en caso de error
 
 @app.callback(
     Output('rend-player-select', 'options'),
@@ -1794,40 +1779,57 @@ def update_dropdowns_from_store(data):
     Input('data-store', 'data'),
 )
 def toggle_empty_state(data):
-    # Verificar si realmente hay datos cargados
-    # Un data vacío puede ser: None, '', 'null', '{}', '[]'
+    # === DETECCIÓN ROBUSTA DE DATOS VACÍOS ===
     has_data = False
     
-    if data is not None and data not in ('', 'null', '{}', '[]'):
-        # Intentar cargar como JSON para verificar si tiene contenido válido
-        try:
-            import json
-            parsed = json.loads(data) if isinstance(data, str) else data
-            # Si es una lista o dict y no está vacío
-            if isinstance(parsed, (list, dict)) and len(parsed) > 0:
-                has_data = True
-            elif isinstance(parsed, list) and len(parsed) == 0:
-                has_data = False
-            else:
-                has_data = False
-        except:
-            has_data = False
+    # Caso 1: data es None
+    if data is None:
+        has_data = False
     
-    # Si no hay datos → mostrar estado vacío, ocultar dashboard
+    # Caso 2: data es string
+    elif isinstance(data, str):
+        # Si es 'null' o '[]' o '{}' o '' → vacío
+        if data in ('null', '[]', '{}', ''):
+            has_data = False
+        else:
+            # Intentar parsear como JSON
+            try:
+                import json
+                parsed = json.loads(data)
+                # Verificar que no sea una lista/dict vacío
+                if isinstance(parsed, list) and len(parsed) == 0:
+                    has_data = False
+                elif isinstance(parsed, dict) and len(parsed) == 0:
+                    has_data = False
+                else:
+                    has_data = True
+            except:
+                has_data = False
+    
+    # Caso 3: data es lista o dict (ya parseado)
+    elif isinstance(data, (list, dict)):
+        has_data = len(data) > 0
+    
+    # Caso 4: cualquier otro tipo
+    else:
+        has_data = False
+    
+    # === APLICAR ESTILOS ===
     if not has_data:
+        # Mostrar EMPTY STATE, ocultar DASHBOARD
         return (
             {'display': 'none'},  # dashboard oculto
             {'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center',
              'minHeight': '420px', 'maxWidth': '1500px', 'margin': '0 auto',
              'padding': '22px 28px'}  # empty state visible
         )
-    
-    # Si hay datos → mostrar dashboard, ocultar estado vacío
-    return (
-        {'display': 'flex', 'gap': '20px', 'padding': '22px 28px',
-         'maxWidth': '1500px', 'margin': '0 auto'},  # dashboard visible
-        {'display': 'none'}  # empty state oculto
-    )
+    else:
+        # Mostrar DASHBOARD, ocultar EMPTY STATE
+        return (
+            {'display': 'flex', 'gap': '20px', 'padding': '22px 28px',
+             'maxWidth': '1500px', 'margin': '0 auto'},  # dashboard visible
+            {'display': 'none'}  # empty state oculto
+        )
 # ══════════════════════════════════════════
 # RUN
 # ══════════════════════════════════════════
