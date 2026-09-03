@@ -1259,7 +1259,7 @@ html.Div([
                                                  'height': '7px', 'borderRadius': '50%',
                                                  'background': c, 'marginRight': '5px'}),
                                 lbl,
-                            ], style={'fontSize': '9px', 'color': MUTED, 'marginRight': '14px'})
+                            ], style={'fontSize': '11px', 'color': MUTED, 'marginRight': '14px'})
                               for lbl, c in [('Alto', TEAL), ('Medio', GOLD), ('Bajo', HOT)]],
                         ], style={'marginBottom': '8px'}),
                         html.Div(id='chart-bar-wrap'),
