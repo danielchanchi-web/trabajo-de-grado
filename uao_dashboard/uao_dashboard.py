@@ -15,6 +15,7 @@ import dash
 from dash import dcc, html, Input, Output, State, callback_context, no_update, ALL
 import dash_bootstrap_components as dbc
 import json
+from io import StringIO
 
 # ══════════════════════════════════════════
 # ⚠️  CAMBIA ESTA LÍNEA CON TU RUTA ⚠️
@@ -237,7 +238,10 @@ except Exception as e:
         'dj_tiempo': [],
     })
 
-ALL_IDS = df['Nombre'].tolist()
+EMPTY_DF = pd.DataFrame(columns=[
+    'Nombre', 'Overall', 'Overall_Z', 'Nivel', 'Vel_Z', 'Ag_Z', 'Star_Z',
+    *[c for cfg in JUMP_CFG.values() for m in cfg['metrics'] for c in (m[1], m[2])]
+])
 
 # ══════════════════════════════════════════
 # PALETA
@@ -1535,7 +1539,7 @@ html.Div([
 )
 
 def update_charts(sel, highlights, data):
-    df = pd.read_json(data) if data else EMPTY_DF
+    df = pd.read_json(StringIO(data)) if data else EMPTY_DF
     sel        = sel or []
     highlights = highlights or []
 
@@ -1716,7 +1720,7 @@ def jump_section(c_cmj, c_sj, c_dj, player_sel, highlights, main_tab, cur_tab, d
 
     if main_tab != 'salt':
         return (no_update, no_update, no_update, no_update, no_update, no_update, no_update)
-    df = pd.read_json(data) if data else EMPTY_DF
+    df = pd.read_json(StringIO(data)) if data else EMPTY_DF
     
     ctx = callback_context
     tid = ctx.triggered[0]['prop_id'] if ctx.triggered else ''
@@ -1887,7 +1891,7 @@ def update_dropdowns_from_store(data):
         return [], []
     
     # Convertir los datos del Store a DataFrame
-    df_store = pd.read_json(data)
+    df_store = pd.read_json(StringIO(data)) if data else EMPTY_DF
     ids = df_store['Nombre'].tolist()
     
     if not ids:
