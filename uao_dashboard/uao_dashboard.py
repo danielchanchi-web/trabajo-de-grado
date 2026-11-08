@@ -132,7 +132,7 @@ def load_data(path):
     ds['dj_takeoff_velocity_raw'] = prom_intentos(ds, 'takeoff_velocity_dj_')
     ds['dj_potencia_raw'] = prom_intentos(ds, 'avg_propulsive_power_dj_')
     ds['dj_peak_power_raw'] = prom_intentos(ds, 'peak_propulsive_power_dj_')
-    ds['dj_aterrizaje_raw'] = prom_intentos(ds, 'peak_braking_force_dj_')
+    ds['dj_aterrizaje_raw'] = prom_intentos(ds, 'peak_landing_force_dj_')
     ds['dj_concentric_force_raw'] = prom_intentos(ds, 'avg_propulsive_force_dj_')
     ds['dj_concentric_impulse_raw'] = prom_intentos(ds, 'propulsive_impulse_dj_')
 
