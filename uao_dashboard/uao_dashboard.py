@@ -564,7 +564,7 @@ JUMP_CFG = {
              ('Potencia máxima', 'cmj_peak_power_raw', 'cmj_peak_power_z', '#A3E635', 'W'),
              ('Fuerza de aterrizaje', 'cmj_aterrizaje_raw', 'cmj_aterrizaje_z', HOT, 'N'),
              ('Fuerza concéntrica', 'cmj_concentric_force_raw', 'cmj_concentric_force_z', '#EC4899', 'N'),
-             ('Impulso concéntrico', 'cmj_concentric_impulse_raw', 'cmj_concentric_impulse_z', '#67E8F9', 'Ns'),
+             ('Impulso concéntrico', 'cmj_concentric_impulse_raw', 'cmj_concentric_impulse_z', '#67E8F9', 'N*s'),
         ]
     },
   
@@ -579,7 +579,7 @@ JUMP_CFG = {
             ('Potencia máxima', 'sj_peak_power_raw', 'sj_peak_power_z', '#A3E635', 'W'),
             ('Fuerza de aterrizaje', 'sj_aterrizaje_raw', 'sj_aterrizaje_z', HOT, 'N'),
             ('Fuerza concéntrica', 'sj_concentric_force_raw', 'sj_concentric_force_z', '#EC4899', 'N'),
-            ('Impulso concéntrico', 'sj_concentric_impulse_raw', 'sj_concentric_impulse_z', '#67E8F9', 'Ns'),
+            ('Impulso concéntrico', 'sj_concentric_impulse_raw', 'sj_concentric_impulse_z', '#67E8F9', 'N*s'),
        ]
 },
     'dj': {
@@ -594,7 +594,7 @@ JUMP_CFG = {
             ('Potencia máxima', 'dj_peak_power_raw', 'dj_peak_power_z', '#A3E635', 'W'),
             ('Fuerza de aterrizaje', 'dj_aterrizaje_raw', 'dj_aterrizaje_z', HOT, 'N'),
             ('Fuerza concéntrica', 'dj_concentric_force_raw', 'dj_concentric_force_z', '#EC4899', 'N'),
-            ('Impulso concéntrico', 'dj_concentric_impulse_raw', 'dj_concentric_impulse_z', '#67E8F9', 'Ns'),
+            ('Impulso concéntrico', 'dj_concentric_impulse_raw', 'dj_concentric_impulse_z', '#67E8F9', 'N*s'),
        ]
 },
 }
