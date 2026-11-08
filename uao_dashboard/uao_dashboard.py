@@ -37,17 +37,19 @@ def load_data(path):
     # ── Velocidad (hoja "Velocidad") ──
     dv = pd.read_excel(path, sheet_name='Velocidad', header=0)
     dv.columns = [str(c).strip() for c in dv.columns]
+    dv = dv.rename(columns={'Jugador': 'Nombre'})
     dv = dv[dv['Nombre'].astype(str).str.startswith('UAO_')].copy()
     dv['Nombre'] = dv['Nombre'].astype(str).str.strip().str.upper()
     
     dv['Z_10m_py'] = zscore_col(dv['sprint_10m_p1']) * -1
     dv['Z_20m_py'] = zscore_col(dv['sprint_20m_p1']) * -1
-    dv['Z_30m_py'] = zscore_col(dv['sprint_30m_p1']) * -1
-    dv['Vel_Z'] = dv[['Z_10m_py', 'Z_20m_py', 'Z_30m_py']].mean(axis=1).round(3)
-    dv = dv[['Nombre', 'sprint_10m_p1', 'sprint_20m_p1', 'sprint_30m_p1', 'Vel_Z']]
+    dv['Vel_Z'] = dv[['Z_10m_py', 'Z_20m_py']].mean(axis=1).round(3)
+    dv = dv[['Nombre', 'sprint_10m_p1', 'sprint_20m_p1', 'Vel_Z']]
 
     # ── 5-10-5 (hoja "5-10-5") ──
     d5 = pd.read_excel(path, sheet_name='5-10-5', header=0)
+    d5.columns = [str(c).strip() for c in d5.columns]
+    d5 = d5.rename(columns={'Jugador': 'Nombre'})
     d5 = d5[d5['Nombre'].astype(str).str.startswith('UAO_')].copy()
     d5['Nombre'] = d5['Nombre'].astype(str).str.strip().str.upper()
     
@@ -64,6 +66,8 @@ def load_data(path):
 
     # ── Stardrill (hoja "Stardrill") ──
     dsd = pd.read_excel(path, sheet_name='Stardrill', header=0)
+    dsd.columns = [str(c).strip() for c in dsd.columns]
+    dsd = dsd.rename(columns={'Jugador': 'Nombre'}) 
     dsd = dsd[dsd['Nombre'].astype(str).str.startswith('UAO_')].copy()
     dsd['Nombre'] = dsd['Nombre'].astype(str).str.strip().str.upper()
     
@@ -78,6 +82,7 @@ def load_data(path):
 
     # ── Saltos desde "Saltos" ──
     ds = pd.read_excel(path, sheet_name='Saltos', header=0)
+    ds = ds.rename(columns={'Jugador': 'Nombre'})
     ds = ds[ds['Nombre'].astype(str).str.startswith('UAO_')].copy()
     ds['Nombre'] = ds['Nombre'].astype(str).str.strip().str.upper()
     ds = ds.reset_index(drop=True)
@@ -122,7 +127,7 @@ def load_data(path):
     # ── DJ ──
     ds['dj_altura_raw'] = prom_intentos(ds, 'jump_height_dj_')
     ds['dj_vuelo_raw'] = prom_intentos(ds, 'flight_time_dj_')
-    ds['dj_rsi_raw'] = prom_intentos(ds, 'RSI__dj_')
+    ds['dj_rsi_raw'] = prom_intentos(ds, 'RSI_dj_')
     ds['dj_takeoff_velocity_raw'] = prom_intentos(ds, 'takeoff_velocity_dj_')
     ds['dj_potencia_raw'] = prom_intentos(ds, 'avg_propulsive_power_dj_')
     ds['dj_peak_power_raw'] = prom_intentos(ds, 'peak_propulsive_power_dj_')
