@@ -148,10 +148,12 @@ def load_data(path):
         'dj_potencia_raw', 'dj_peak_power_raw', 'dj_aterrizaje_raw',
         'dj_concentric_force_raw', 'dj_concentric_impulse_raw',
     ]
+    LOWER_IS_BETTER = {'cmj_aterrizaje_raw', 'sj_aterrizaje_raw', 'dj_aterrizaje_raw'}
+
     for col in raw_cols:
         z_col = col.replace('_raw', '_z')
         z = zscore_grupo(pd.to_numeric(ds[col], errors='coerce'))
-        ds[z_col] = (-z).round(3)
+        ds[z_col] = (-z if col in LOWER_IS_BETTER else z).round(3)
 
     # ══════════════════════════════════════════
     # UNIR TODO usando los nombres de la hoja "Saltos" como base
@@ -688,7 +690,7 @@ def fig_jump_radar(df, jump_type, player_ids, highlight_traces=None):
     # ── CMJ: z-score directo ──
     if jump_type == 'cmj':
         # Invertir fuerza de aterrizaje: menor fuerza = mejor rendimiento
-        INVERT_CMJ = {'cmj_aterrizaje_z'}
+        INVERT_CMJ = set()
         
         offset   = 3.5
         axis_max = 7.0
