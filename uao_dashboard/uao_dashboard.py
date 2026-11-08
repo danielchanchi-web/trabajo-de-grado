@@ -238,11 +238,6 @@ except Exception as e:
         'dj_tiempo': [],
     })
 
-EMPTY_DF = pd.DataFrame(columns=[
-    'Nombre', 'Overall', 'Overall_Z', 'Nivel', 'Vel_Z', 'Ag_Z', 'Star_Z',
-    *[c for cfg in JUMP_CFG.values() for m in cfg['metrics'] for c in (m[1], m[2])]
-])
-
 # ══════════════════════════════════════════
 # PALETA
 # ══════════════════════════════════════════
@@ -601,6 +596,11 @@ JUMP_CFG = {
        ]
 },
 }
+
+EMPTY_DF = pd.DataFrame(columns=[
+    'Nombre', 'Overall', 'Overall_Z', 'Nivel', 'Vel_Z', 'Ag_Z', 'Star_Z',
+    *[c for cfg in JUMP_CFG.values() for m in cfg['metrics'] for c in (m[1], m[2])]
+])
 
 # ── Normalizar métricas de salto a 0-100 para el radar ──
 def normalize_jump_metrics(df, jump_type, player_ids):
