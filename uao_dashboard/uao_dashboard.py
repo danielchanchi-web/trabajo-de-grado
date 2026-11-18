@@ -490,7 +490,7 @@ JUMP_CFG = {
              ('RSI', 'cmj_rsi_raw', 'cmj_rsi_z', '#8B5CF6', ''),
              ('Velocidad vertical', 'cmj_takeoff_velocity_raw', 'cmj_takeoff_velocity_z', '#F97316', 'm/s'),  # ← CORREGIDO
              ('Potencia concéntrica', 'cmj_potencia_raw', 'cmj_potencia_z', GOLD, 'W'),
-             ('Potencia máxima', 'cmj_peak_power_raw', 'cmj_peak_power_z', '#A3E635', 'W'),
+             ('Potencia máxima relativa', 'cmj_peak_power_raw', 'cmj_peak_power_z', '#A3E635', 'W/kg'),
              ('Fuerza de aterrizaje', 'cmj_aterrizaje_raw', 'cmj_aterrizaje_z', HOT, 'N'),
              ('Fuerza concéntrica', 'cmj_concentric_force_raw', 'cmj_concentric_force_z', '#EC4899', 'N'),
              ('Impulso concéntrico', 'cmj_concentric_impulse_raw', 'cmj_concentric_impulse_z', '#67E8F9', 'N*s'),
@@ -505,7 +505,7 @@ JUMP_CFG = {
             ('Tiempo de vuelo', 'sj_vuelo_raw', 'sj_vuelo_z', COOL, 'ms'),
             ('Velocidad vertical', 'sj_takeoff_velocity_raw', 'sj_takeoff_velocity_z', '#F97316', 'm/s'),  # ← CORREGIDO
             ('Potencia concéntrica', 'sj_potencia_raw', 'sj_potencia_z', GOLD, 'W'),
-            ('Potencia máxima', 'sj_peak_power_raw', 'sj_peak_power_z', '#A3E635', 'W'),
+            ('Potencia máxima relativa', 'sj_peak_power_raw', 'sj_peak_power_z', '#A3E635', 'W/kg'),
             ('Fuerza de aterrizaje', 'sj_aterrizaje_raw', 'sj_aterrizaje_z', HOT, 'N'),
             ('Fuerza concéntrica', 'sj_concentric_force_raw', 'sj_concentric_force_z', '#EC4899', 'N'),
             ('Impulso concéntrico', 'sj_concentric_impulse_raw', 'sj_concentric_impulse_z', '#67E8F9', 'N*s'),
@@ -520,7 +520,7 @@ JUMP_CFG = {
             ('RSI', 'dj_rsi_raw', 'dj_rsi_z', '#8B5CF6', ''),
             ('Velocidad vertical', 'dj_takeoff_velocity_raw', 'dj_takeoff_velocity_z', '#F97316', 'm/s'),  # ← CORREGIDO
             ('Potencia concéntrica', 'dj_potencia_raw', 'dj_potencia_z', GOLD, 'W'),
-            ('Potencia máxima', 'dj_peak_power_raw', 'dj_peak_power_z', '#A3E635', 'W'),
+            ('Potencia máxima relativa', 'dj_peak_power_raw', 'dj_peak_power_z', '#A3E635', 'W/kg'),
             ('Fuerza de aterrizaje', 'dj_aterrizaje_raw', 'dj_aterrizaje_z', HOT, 'N'),
             ('Fuerza concéntrica', 'dj_concentric_force_raw', 'dj_concentric_force_z', '#EC4899', 'N'),
             ('Impulso concéntrico', 'dj_concentric_impulse_raw', 'dj_concentric_impulse_z', '#67E8F9', 'N*s'),
